@@ -122,7 +122,7 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
 
 Qt::ItemFlags BotModel::flags(const QModelIndex &index) const
 {
-    Qt::ItemFlags flags = Qt::ItemIsEnabled;
+    Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
     if (index.column() == Enabled) {
         flags |= Qt::ItemIsUserCheckable;
     }
@@ -133,6 +133,15 @@ Qt::ItemFlags BotModel::flags(const QModelIndex &index) const
 
     return flags;
 }
+
+void BotModel::removeRow(int row)
+{
+    beginRemoveRows(QModelIndex(), row, row);
+    m_bots.removeAt(row);
+    endRemoveRows();
+    save();
+}
+
 
 void BotModel::addBot(QString path)
 {

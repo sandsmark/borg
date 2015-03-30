@@ -15,6 +15,7 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
+#include <QDebug>
 
 #define SERVERPATH_KEY "serverpath"
 #define PLAYERS_KEY    "players"
@@ -39,13 +40,34 @@ MainWindow::MainWindow(QWidget *parent)
     m_serverOutput.setReadOnly(true);
     addWidget(&m_serverOutput);
 
+    ///////////
+    /// Bot list view
+    ///
     m_botsView->setItemDelegate(new BotViewDelegate);
     m_botsView->horizontalHeader()->show();
     m_botsView->setModel(m_botModel);
     m_botsView->resizeColumnsToContents();
     m_botsView->setShowGrid(false);
+    m_botsView->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_botsView->setSelectionBehavior(QAbstractItemView::SelectRows);
     leftLayout->addWidget(m_botsView);
 
+    ///////////
+    /// Add/remove buttons
+    ///
+    QWidget *addRemoveGroup = new QWidget;
+    addRemoveGroup->setLayout(new QHBoxLayout);
+    QPushButton *addButton = new QPushButton(tr("Add"));
+    connect(addButton, SIGNAL(clicked()), SLOT(addBot()));
+    addRemoveGroup->layout()->addWidget(addButton);
+    QPushButton *removeButton = new QPushButton(tr("Remove"));
+    connect(removeButton, SIGNAL(clicked()), SLOT(removeBot()));
+    addRemoveGroup->layout()->addWidget(removeButton);
+    leftLayout->addWidget(addRemoveGroup);
+
+    ///////////
+    /// Server control
+    ///
     QGroupBox *serverBox = new QGroupBox(tr("Server"));
     serverBox->setLayout(new QHBoxLayout);
     serverBox->layout()->addWidget(m_serverPath);
@@ -59,6 +81,9 @@ MainWindow::MainWindow(QWidget *parent)
     serverBox->layout()->addWidget(m_launchButton);
     leftLayout->addWidget(serverBox);
 
+    ///////////
+    /// Quit button
+    ///
     QPushButton *quitButton = new QPushButton(tr("&Quit"));
     connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
 
@@ -139,4 +164,23 @@ void MainWindow::readServerOut()
 {
     QByteArray output = m_serverProcess.readAllStandardOutput();
     m_serverOutput.append(output);
+}
+
+void MainWindow::addBot()
+{
+
+}
+
+void MainWindow::removeBot()
+{
+    const QModelIndex index = m_botsView->currentIndex();
+    if (!index.isValid()) {
+        return;
+    }
+    const int row = index.row();
+    QString name = m_botModel->data(m_botModel->index(row, BotModel::Name)).toString();
+    if (QMessageBox::question(this, tr("Really remove?"), tr("Are you sure you want to remove %1?").arg(name)) == QMessageBox::No) {
+        return;
+    }
+    m_botModel->removeRow(row);
 }
