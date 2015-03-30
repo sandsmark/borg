@@ -16,6 +16,7 @@
 #include <QMessageBox>
 #include <QProcess>
 #include <QDebug>
+#include <QFileDialog>
 
 #define SERVERPATH_KEY "serverpath"
 #define PLAYERS_KEY    "players"
@@ -168,7 +169,8 @@ void MainWindow::readServerOut()
 
 void MainWindow::addBot()
 {
-
+    QString path = QFileDialog::getOpenFileName(this, tr("Select bot"));
+    m_botModel->addBot(path);
 }
 
 void MainWindow::removeBot()
