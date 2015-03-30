@@ -12,6 +12,9 @@ BotModel::BotModel(QObject *parent) :
 {
     QSettings settings;
     m_bots = settings.value(BOTS_KEY, QVariant::fromValue(QList<Bot>())).value<QList<Bot> >();
+    for (int i=0; i<m_bots.length(); i++) {
+        initializeBotProcess(&m_bots[i]);
+    }
 }
 
 BotModel::~BotModel()
@@ -48,7 +51,7 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
     case Wins:
         return bot.wins;
     case Running:
-        return bot.process->state() == QProcess::Running;
+        return (bot.process->state() == QProcess::Running) ? tr("Running") : tr("Not running");
     default:
         qWarning() << Q_FUNC_INFO << "asked for unknown colum" << column;
         return QVariant("fuck off");
@@ -142,6 +145,16 @@ void BotModel::removeRow(int row)
     save();
 }
 
+void BotModel::initializeBotProcess(Bot *bot)
+{
+    bot->process = QSharedPointer<QProcess>(new QProcess);
+    QFileInfo info(bot->path);
+    bot->logfile = QSharedPointer<QFile>(new QFile(info.path() + "/logfile.txt"));
+    bot->logfile->open(QIODevice::WriteOnly | QIODevice::Append);
+    connect(bot->process.data(), SIGNAL(readyReadStandardError()), SLOT(storeOutput()));
+    connect(bot->process.data(), SIGNAL(readyReadStandardOutput()), SLOT(storeOutput()));
+
+}
 
 void BotModel::addBot(QString path)
 {
@@ -170,9 +183,9 @@ void BotModel::addBot(QString path)
     } else if (!file.isExecutable()) {
         bot.runtime = "unknown";
     }
-    bot.process = new QProcess;
     beginInsertRows(QModelIndex(), m_bots.length(), m_bots.length() + 1);
     m_bots.append(bot);
+    initializeBotProcess(&m_bots.last());
     endInsertRows();
 
     save();
@@ -209,6 +222,18 @@ QDataStream &operator<<(QDataStream &out, const Bot &bot)
 QDataStream &operator>>(QDataStream &in, Bot &bot)
 {
     in >> bot.enabled >> bot.name >> bot.path >> bot.runtime >> bot.wins;
-    bot.process = new QProcess;
     return in;
+}
+
+
+void BotModel::storeOutput()
+{
+    for (int i=0; i<m_bots.length(); i++) {
+        if (m_bots[i].process.data() != sender()) continue;
+
+        m_bots[i].logfile->write(m_bots[i].process->readAllStandardError());
+        m_bots[i].logfile->write(m_bots[i].process->readAllStandardOutput());
+        return;
+    }
+    qWarning() << "Unable to find bot with process" << sender();
 }

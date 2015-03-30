@@ -6,6 +6,8 @@
 #include <QList>
 #include <QProcess>
 #include <QHash>
+#include <QFile>
+#include <QSharedPointer>
 
 struct Bot {
     bool enabled;
@@ -13,8 +15,10 @@ struct Bot {
     QString runtime;
     QString path;
     int wins;
-    QProcess *process;
+    QSharedPointer<QProcess> process;
+    QSharedPointer<QFile> logfile;
 };
+
 QDataStream &operator<<(QDataStream &out, const Bot &bot);
 QDataStream &operator>>(QDataStream &in, Bot &bot);
 Q_DECLARE_METATYPE(Bot)
@@ -52,7 +56,12 @@ public:
 
     static QHash<QString, QString> runtimes();
 
+private slots:
+    void storeOutput();
+
 private:
+    void initializeBotProcess(Bot *bot);
+
     QList<Bot> m_bots;
 };
 
