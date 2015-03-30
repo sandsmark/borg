@@ -121,6 +121,7 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
         qWarning() << "asked to set value for illegal column" << index.column();
         return false;
     }
+    save();
     return true;
 }
 
@@ -239,6 +240,20 @@ QHash<QString, QString> BotModel::runtimes()
     ret["mono"] = "/usr/bin/mono";
 
     return ret;
+}
+
+void BotModel::giveWin(QString name)
+{
+    for(int i=0; i<m_bots.length(); i++) {
+        if (!m_bots[i].enabled) continue;
+        if (m_bots[i].name != name) continue;
+
+        m_bots[i].wins++;
+        save();
+        return;
+    }
+
+    QMessageBox::warning(0, tr("Unable to find winner!"), tr("Unable to find '%1' in the list of bots, please adjust score manually").arg(name));
 }
 
 

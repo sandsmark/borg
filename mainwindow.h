@@ -29,6 +29,9 @@ private slots:
     void addBot();
     void removeBot();
 
+    void kill();
+    void serverFinished(int status);
+
 private:
     QTableView *m_botsView;
     BotModel *m_botModel;

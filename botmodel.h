@@ -54,6 +54,8 @@ public:
 
     static QHash<QString, QString> runtimes();
 
+    void giveWin(QString name);
+
 public slots:
     void launchBots();
     void killBots();

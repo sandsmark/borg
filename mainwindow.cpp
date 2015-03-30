@@ -83,13 +83,21 @@ MainWindow::MainWindow(QWidget *parent)
     serverBox->layout()->addWidget(m_launchButton);
     leftLayout->addWidget(serverBox);
 
+
+    leftLayout->addItem(new QSpacerItem(0, 50));
+
+    ///////////
+    /// Kill button
+    ///
+    QPushButton *killButton = new QPushButton(tr("&Kill"));
+    connect(killButton, SIGNAL(clicked()), SLOT(kill()));
+    leftLayout->addWidget(killButton);
+
     ///////////
     /// Quit button
     ///
     QPushButton *quitButton = new QPushButton(tr("&Quit"));
     connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
-
-    leftLayout->addItem(new QSpacerItem(0, 50));
     leftLayout->addWidget(quitButton);
 
     QSettings settings;
@@ -105,6 +113,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_launchButton, SIGNAL(clicked()), SLOT(launchServer()));
     connect(&m_serverProcess, SIGNAL(readyReadStandardError()), SLOT(readServerErr()));
     connect(&m_serverProcess, SIGNAL(readyReadStandardOutput()), SLOT(readServerOut()));
+    connect(&m_serverProcess, SIGNAL(finished(int)), SLOT(serverFinished(int)));
 }
 
 MainWindow::~MainWindow()
@@ -188,4 +197,28 @@ void MainWindow::removeBot()
         return;
     }
     m_botModel->removeRow(row);
+}
+
+void MainWindow::kill()
+{
+    m_serverProcess.kill();
+    m_botModel->killBots();
+}
+
+void MainWindow::serverFinished(int status)
+{
+    m_botModel->killBots();
+
+    if (status != 0) {
+        qWarning() << "Server finished with unclean status" << status;
+        m_serverOutput.append(QStringLiteral("Server finished with unclean status %1!\n").arg(status));
+    }
+    QFile resultsLog(m_serverProcess.workingDirectory() + "/scores.log");
+    if (!resultsLog.open(QIODevice::ReadOnly)) {
+        qWarning() << "unable to open results log!";
+        m_serverOutput.append("Unable to open results log");
+        return;
+    }
+    QByteArray winner = resultsLog.readLine().trimmed();
+    m_botModel->giveWin(QString::fromUtf8(winner));
 }
