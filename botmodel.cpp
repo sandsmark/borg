@@ -5,10 +5,13 @@
 #include <QMessageBox>
 #include <QSettings>
 
+#define BOTS_KEY "bots"
+
 BotModel::BotModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
-    addBot("/home/sandsmark/tmp/kart-nitelite-bot/nitelite/bot.py");
+    QSettings settings;
+    m_bots = settings.value(BOTS_KEY, QVariant::fromValue(QList<Bot>())).value<QList<Bot> >();
 }
 
 BotModel::~BotModel()
@@ -162,12 +165,14 @@ void BotModel::addBot(QString path)
     beginInsertRows(QModelIndex(), m_bots.length(), m_bots.length() + 1);
     m_bots.append(bot);
     endInsertRows();
+
+    save();
 }
 
 void BotModel::save()
 {
     QSettings settings;
-    settings.
+    settings.setValue(BOTS_KEY, QVariant::fromValue(m_bots));
 }
 
 QHash<QString, QString> BotModel::runtimes()
@@ -183,3 +188,18 @@ QHash<QString, QString> BotModel::runtimes()
     return ret;
 }
 
+
+
+QDataStream &operator<<(QDataStream &out, const Bot &bot)
+{
+    out << bot.enabled << bot.name << bot.path << bot.runtime << bot.wins;
+    return out;
+}
+
+
+QDataStream &operator>>(QDataStream &in, Bot &bot)
+{
+    in >> bot.enabled >> bot.name >> bot.path >> bot.runtime >> bot.wins;
+    bot.process = new QProcess;
+    return in;
+}

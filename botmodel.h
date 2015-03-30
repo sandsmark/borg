@@ -15,6 +15,9 @@ struct Bot {
     int wins;
     QProcess *process;
 };
+QDataStream &operator<<(QDataStream &out, const Bot &bot);
+QDataStream &operator>>(QDataStream &in, Bot &bot);
+Q_DECLARE_METATYPE(Bot)
 
 class BotModel : public QAbstractTableModel
 {
