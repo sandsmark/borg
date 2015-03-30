@@ -19,7 +19,7 @@ QWidget *BotViewDelegate::createEditor(QWidget *parent, const QStyleOptionViewIt
     switch(index.column()) {
     case BotModel::Runtime: {
         QComboBox *combobox = new QComboBox(parent);
-        combobox->addItems(QStringList() << "native" << "python" << "perl" << "ruby" << "nodejs");
+        combobox->addItems(BotModel::runtimes().keys());
         return combobox;
     }
     case BotModel::Path:

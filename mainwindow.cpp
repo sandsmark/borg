@@ -43,6 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_botsView->horizontalHeader()->show();
     m_botsView->setModel(m_botModel);
     m_botsView->resizeColumnsToContents();
+    m_botsView->setShowGrid(false);
     leftLayout->addWidget(m_botsView);
 
     QGroupBox *serverBox = new QGroupBox(tr("Server"));

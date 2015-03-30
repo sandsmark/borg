@@ -1,17 +1,14 @@
 #include "botmodel.h"
 #include <QDebug>
+#include <QFileInfo>
+#include <QDir>
+#include <QMessageBox>
+#include <QSettings>
+
 BotModel::BotModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
-    for (int i=0; i<10; i++) {
-        Bot bot;
-        bot.enabled = i < 5;
-        bot.name = QStringLiteral("bot") + QString::number(i);
-        bot.runtime = QStringLiteral("python");
-        bot.path = QStringLiteral("/usr/bin/foo");
-        bot.wins = 0;
-        m_bots.append(bot);
-    }
+    addBot("/home/sandsmark/tmp/kart-nitelite-bot/nitelite/bot.py");
 }
 
 BotModel::~BotModel()
@@ -47,8 +44,10 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
         return bot.path;
     case Wins:
         return bot.wins;
+    case Running:
+        return bot.process->state() == QProcess::Running;
     default:
-        qWarning() << "asked for unknown colum" << column;
+        qWarning() << Q_FUNC_INFO << "asked for unknown colum" << column;
         return QVariant("fuck off");
     }
 }
@@ -74,6 +73,8 @@ QVariant BotModel::headerData(int section, Qt::Orientation orientation, int role
         return tr("Path");
     case Wins:
         return tr("Wins");
+    case Running:
+        return tr("Running");
     default:
         qDebug() << "asked for unknown column" << section;
         return QVariant("Foo");
@@ -107,6 +108,8 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
     case Wins:
         bot->wins = value.toInt();
         break;
+    case Running:
+        return false;
     default:
         qWarning() << "asked to set value for illegal column" << index.column();
         return false;
@@ -116,10 +119,67 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
 
 Qt::ItemFlags BotModel::flags(const QModelIndex &index) const
 {
+    Qt::ItemFlags flags = Qt::ItemIsEnabled;
     if (index.column() == Enabled) {
-        return Qt::ItemIsEnabled | Qt::ItemIsUserCheckable;
+        flags |= Qt::ItemIsUserCheckable;
     }
 
-    return Qt::ItemIsEnabled | Qt::ItemIsEditable;
+    if (index.column() != Running) {
+        flags |= Qt::ItemIsEditable;
+    }
+
+    return flags;
+}
+
+void BotModel::addBot(QString path)
+{
+    QFileInfo file(path);
+
+    if (!file.exists()) {
+        QMessageBox::warning(0, tr("Unable to add bot"), tr("The path to the bot does not exist."));
+        return;
+    }
+
+    Bot bot;
+    bot.enabled = false;
+    bot.path = path;
+    bot.name = file.dir().dirName();
+    bot.wins = 0;
+    if (file.suffix() == "py") {
+        bot.runtime = "python";
+    } else if (file.suffix() == "rb") {
+        bot.runtime = "ruby";
+    } else if (file.suffix() == "js") {
+        bot.runtime = "nodejs";
+    } else if (file.suffix() == "pl") {
+        bot.runtime = "perl";
+    } else if (file.suffix() == "exe") {
+        bot.runtime = "mono";
+    } else if (!file.isExecutable()) {
+        bot.runtime = "unknown";
+    }
+    bot.process = new QProcess;
+    beginInsertRows(QModelIndex(), m_bots.length(), m_bots.length() + 1);
+    m_bots.append(bot);
+    endInsertRows();
+}
+
+void BotModel::save()
+{
+    QSettings settings;
+    settings.
+}
+
+QHash<QString, QString> BotModel::runtimes()
+{
+    QHash<QString, QString> ret;
+    ret["python"] = "/usr/bin/python2";
+    ret["python3"] = "/usr/bin/python";
+    ret["ruby"] = "/usr/bin/ruby";
+    ret["nodejs"] = "/usr/bin/node";
+    ret["perl"] = "/usr/bin/perl";
+    ret["mono"] = "/usr/bin/mono";
+
+    return ret;
 }
 
