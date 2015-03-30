@@ -19,6 +19,7 @@ BotModel::BotModel(QObject *parent) :
 
 BotModel::~BotModel()
 {
+    killBots();
 }
 
 QVariant BotModel::data(const QModelIndex &index, int role) const
@@ -145,6 +146,35 @@ void BotModel::removeRow(int row)
     save();
 }
 
+void BotModel::launchBots()
+{
+    beginResetModel(); // For running info
+    for (int i=0; i<m_bots.length(); i++) {
+        if (!m_bots[i].enabled) continue;
+        QFileInfo file(m_bots[i].path);
+        m_bots[i].process->setWorkingDirectory(file.path());
+        if (m_bots[i].runtime.isEmpty()) {
+            m_bots[i].process->start(m_bots[i].path);
+        } else {
+            if (!runtimes().contains(m_bots[i].runtime)) {
+                qWarning() << "Unable to find runtime" << m_bots[i].runtime;
+                continue;
+            }
+            m_bots[i].process->start(runtimes()[m_bots[i].runtime], QStringList() << m_bots[i].path);
+        }
+    }
+    endResetModel();
+}
+
+void BotModel::killBots()
+{
+    beginResetModel();
+    for (int i=0; i<m_bots.length(); i++) {
+        m_bots[i].process->kill();
+    }
+    endResetModel();
+}
+
 void BotModel::initializeBotProcess(Bot *bot)
 {
     bot->process = QSharedPointer<QProcess>(new QProcess);
@@ -153,6 +183,7 @@ void BotModel::initializeBotProcess(Bot *bot)
     bot->logfile->open(QIODevice::WriteOnly | QIODevice::Append);
     connect(bot->process.data(), SIGNAL(readyReadStandardError()), SLOT(storeOutput()));
     connect(bot->process.data(), SIGNAL(readyReadStandardOutput()), SLOT(storeOutput()));
+    connect(bot->process.data(), SIGNAL(stateChanged(QProcess::ProcessState)), SLOT(botStateChanged()));
 
 }
 
@@ -231,9 +262,19 @@ void BotModel::storeOutput()
     for (int i=0; i<m_bots.length(); i++) {
         if (m_bots[i].process.data() != sender()) continue;
 
-        m_bots[i].logfile->write(m_bots[i].process->readAllStandardError());
-        m_bots[i].logfile->write(m_bots[i].process->readAllStandardOutput());
+        QByteArray err = m_bots[i].process->readAllStandardError();
+        m_bots[i].logfile->write(err);
+        QByteArray out = m_bots[i].process->readAllStandardOutput();
+        m_bots[i].logfile->write(out);
+        qDebug() << err << out;
         return;
     }
     qWarning() << "Unable to find bot with process" << sender();
+}
+
+void BotModel::botStateChanged()
+{
+    //TODO: actually check which bots changed and whatnot plz
+    beginResetModel();
+    endResetModel();
 }

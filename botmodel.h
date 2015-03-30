@@ -48,16 +48,19 @@ public:
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
     Qt::ItemFlags flags(const QModelIndex &index) const;
     void removeRow(int row);
-    void launchBots();
-    void killBots();
     void addBot(QString path);
 
     void save();
 
     static QHash<QString, QString> runtimes();
 
+public slots:
+    void launchBots();
+    void killBots();
+
 private slots:
     void storeOutput();
+    void botStateChanged();
 
 private:
     void initializeBotProcess(Bot *bot);

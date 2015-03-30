@@ -17,6 +17,7 @@
 #include <QProcess>
 #include <QDebug>
 #include <QFileDialog>
+#include <QTimer>
 
 #define SERVERPATH_KEY "serverpath"
 #define PLAYERS_KEY    "players"
@@ -150,6 +151,8 @@ void MainWindow::launchServer()
 
     m_serverProcess.setWorkingDirectory(serverExecutable.path());
     m_serverProcess.start(serverExecutable.filePath(), arguments);
+
+    QTimer::singleShot(1000, m_botModel, SLOT(launchBots()));
 }
 
 void MainWindow::readServerErr()
