@@ -220,5 +220,5 @@ void MainWindow::serverFinished(int status)
         return;
     }
     QByteArray winner = resultsLog.readLine().trimmed();
-    m_botModel->giveWin(QString::fromUtf8(winner));
+    m_botModel->roundOver(QString::fromUtf8(winner));
 }

@@ -51,6 +51,8 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
         return bot.path;
     case Wins:
         return bot.wins;
+    case RoundsPlayed:
+        return bot.roundsPlayed;
     case Running:
         return (bot.process->state() == QProcess::Running) ? tr("Running") : tr("Not running");
     default:
@@ -80,6 +82,8 @@ QVariant BotModel::headerData(int section, Qt::Orientation orientation, int role
         return tr("Path");
     case Wins:
         return tr("Wins");
+    case RoundsPlayed:
+        return tr("Rounds Played");
     case Running:
         return tr("Running");
     default:
@@ -115,6 +119,8 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
     case Wins:
         bot->wins = value.toInt();
         break;
+    case RoundsPlayed:
+        bot->roundsPlayed = value.toInt();
     case Running:
         return false;
     default:
@@ -202,6 +208,7 @@ void BotModel::addBot(QString path)
     bot.path = path;
     bot.name = file.dir().dirName();
     bot.wins = 0;
+    bot.roundsPlayed = 0;
     if (file.suffix() == "py") {
         bot.runtime = "python";
     } else if (file.suffix() == "rb") {
@@ -242,8 +249,14 @@ QHash<QString, QString> BotModel::runtimes()
     return ret;
 }
 
-void BotModel::giveWin(QString name)
+void BotModel::roundOver(QString name)
 {
+    for(int i=0; i<m_bots.length(); i++) {
+        if (m_bots[i].enabled) {
+            m_bots[i].roundsPlayed++;
+        }
+    }
+
     for(int i=0; i<m_bots.length(); i++) {
         if (!m_bots[i].enabled) continue;
         if (m_bots[i].name != name) continue;
@@ -260,14 +273,14 @@ void BotModel::giveWin(QString name)
 
 QDataStream &operator<<(QDataStream &out, const Bot &bot)
 {
-    out << bot.enabled << bot.name << bot.path << bot.runtime << bot.wins;
+    out << bot.enabled << bot.name << bot.path << bot.runtime << bot.wins << bot.roundsPlayed;
     return out;
 }
 
 
 QDataStream &operator>>(QDataStream &in, Bot &bot)
 {
-    in >> bot.enabled >> bot.name >> bot.path >> bot.runtime >> bot.wins;
+    in >> bot.enabled >> bot.name >> bot.path >> bot.runtime >> bot.wins >> bot.roundsPlayed;
     return in;
 }
 
