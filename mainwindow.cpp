@@ -18,6 +18,7 @@
 #include <QDebug>
 #include <QFileDialog>
 #include <QTimer>
+#include <QLabel>
 
 #define SERVERPATH_KEY "serverpath"
 #define PLAYERS_KEY    "players"
@@ -73,9 +74,11 @@ MainWindow::MainWindow(QWidget *parent)
     QGroupBox *serverBox = new QGroupBox(tr("Server"));
     serverBox->setLayout(new QHBoxLayout);
     serverBox->layout()->addWidget(m_serverPath);
+    serverBox->layout()->addWidget(new QLabel(tr("Players:")));
     m_players->setMinimum(1);
     m_players->setMaximum(8);
     serverBox->layout()->addWidget(m_players);
+    serverBox->layout()->addWidget(new QLabel(tr("Rounds:")));
     m_rounds->setMinimum(1);
     m_rounds->setMaximum(10);
     serverBox->layout()->addWidget(m_rounds);

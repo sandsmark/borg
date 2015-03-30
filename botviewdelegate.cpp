@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QComboBox>
 #include <patheditor.h>
+#include <QLineEdit>
 
 BotViewDelegate::BotViewDelegate()
 {
@@ -37,6 +38,12 @@ void BotViewDelegate::setEditorData(QWidget *editor, const QModelIndex &index) c
     PathEditor *pathEditor = qobject_cast<PathEditor*>(editor);
     if (pathEditor) {
         pathEditor->setPath(index.data().toString());
+        return;
+    }
+
+    QLineEdit *lineEdit = qobject_cast<QLineEdit*>(editor);
+    if (lineEdit) {
+        lineEdit->setText(index.data().toString());
         return;
     }
 
