@@ -65,3 +65,12 @@ void BotViewDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, c
 
     QStyledItemDelegate::setModelData(editor, model, index);
 }
+
+QSize BotViewDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    QSize size = QStyledItemDelegate::sizeHint(option, index);
+    if (index.column() == BotModel::Path) {
+        size.setWidth(300);
+    }
+    return size;
+}
