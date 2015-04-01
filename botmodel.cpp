@@ -165,7 +165,12 @@ void BotModel::launchBots()
                 qWarning() << "Unable to find runtime" << m_bots[i].runtime;
                 continue;
             }
-            m_bots[i].process->start(runtimes()[m_bots[i].runtime], QStringList() << m_bots[i].path);
+            QStringList arguments;
+            if (m_bots[i].runtime == "java") {
+                arguments << "-jar";
+            }
+            arguments << m_bots[i].path;
+            m_bots[i].process->start(runtimes()[m_bots[i].runtime], arguments);
         }
     }
     endResetModel();
@@ -180,6 +185,33 @@ void BotModel::killBots()
     endResetModel();
 }
 
+void BotModel::handleProcessError(QProcess::ProcessError error)
+{
+    QProcess *process = qobject_cast<QProcess*>(sender());
+    if (process) {
+        qWarning() << "Error from bot: " << process->program();
+    }
+    switch(error){
+    case QProcess::FailedToStart:
+        qWarning() << "Bot failed to start";
+        break;
+    case QProcess::Crashed:
+        qWarning() << "Bot crashed";
+        break;
+    case QProcess::Timedout:
+        qWarning() << "Bot launch timed out";
+        break;
+    case QProcess::WriteError:
+        qWarning() << "Write error when communicating with bot";
+        break;
+    case QProcess::ReadError:
+        qWarning() << "Read error when communicating with bot";
+    case QProcess::UnknownError:
+    default:
+        qWarning() << "Unknown bot process error";
+    }
+}
+
 void BotModel::initializeBotProcess(Bot *bot)
 {
     bot->process = QSharedPointer<QProcess>(new QProcess);
@@ -189,7 +221,7 @@ void BotModel::initializeBotProcess(Bot *bot)
     connect(bot->process.data(), SIGNAL(readyReadStandardError()), SLOT(storeOutput()));
     connect(bot->process.data(), SIGNAL(readyReadStandardOutput()), SLOT(storeOutput()));
     connect(bot->process.data(), SIGNAL(stateChanged(QProcess::ProcessState)), SLOT(botStateChanged()));
-
+    connect(bot->process.data(), SIGNAL(error(QProcess::ProcessError)), SLOT(handleProcessError(QProcess::ProcessError)));
 }
 
 void BotModel::addBot(QString path)
@@ -217,6 +249,8 @@ void BotModel::addBot(QString path)
         bot.runtime = "perl";
     } else if (file.suffix() == "exe") {
         bot.runtime = "mono";
+    } else if (file.suffix() == "jar") {
+        bot.runtime = "java";
     } else if (!file.isExecutable()) {
         bot.runtime = "unknown";
     }
@@ -243,6 +277,7 @@ QHash<QString, QString> BotModel::runtimes()
     ret["nodejs"] = "/usr/bin/node";
     ret["perl"] = "/usr/bin/perl";
     ret["mono"] = "/usr/bin/mono";
+    ret["java"] = "/usr/bin/java";
 
     return ret;
 }
@@ -300,8 +335,14 @@ void BotModel::storeOutput()
         if (m_bots[i].process.data() != sender()) continue;
 
         QByteArray err = m_bots[i].process->readAllStandardError();
+        if (!err.isEmpty()) {
+            qWarning() << m_bots[i].process->program() << err;
+        }
         m_bots[i].logfile->write(err);
         QByteArray out = m_bots[i].process->readAllStandardOutput();
+        if (!out.isEmpty()) {
+            qDebug() << m_bots[i].process->program() << out;
+        }
         m_bots[i].logfile->write(out);
         return;
     }

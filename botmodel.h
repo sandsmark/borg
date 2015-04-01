@@ -63,6 +63,7 @@ public:
 public slots:
     void launchBots();
     void killBots();
+    void handleProcessError(QProcess::ProcessError error);
 
 private slots:
     void storeOutput();
