@@ -19,22 +19,61 @@
 #include <QFileDialog>
 #include <QTimer>
 #include <QLabel>
+#include <QThread>
 
 #define SERVERPATH_KEY "serverpath"
 #define PLAYERS_KEY    "players"
 #define ROUNDS_KEY     "rounds"
 #define MAPPATH_KEY    "mappath"
 
+static MainWindow *instance = 0;
+
+void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    QByteArray localMsg = msg.toLocal8Bit();
+
+    if (instance) {
+        switch (type) {
+        case QtDebugMsg:
+            instance->normalOutput(msg);
+            break;
+        case QtWarningMsg:
+        case QtCriticalMsg:
+            instance->errorOutput(msg);
+            break;
+        case QtFatalMsg:
+            fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
+            abort();
+        }
+    }
+    switch (type) {
+    case QtDebugMsg:
+        fprintf(stderr, "Debug: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
+        break;
+    case QtWarningMsg:
+        fprintf(stderr, "Warning: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
+        break;
+    case QtCriticalMsg:
+        fprintf(stderr, "Critical: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
+        break;
+    case QtFatalMsg:
+        fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
+        abort();
+    }
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QSplitter(parent),
       m_botsView(new QTableView(this)),
       m_botModel(new BotModel(this)),
       m_serverPath(new PathEditor),
-      m_players(new QSpinBox),
       m_rounds(new QSpinBox),
       m_mapPath(new PathEditor),
       m_launchButton(new QPushButton(tr("&Launch server")))
 {
+    instance = this;
+    qInstallMessageHandler(messageHandler);
+
     QWidget *leftWidget = new QWidget;
     QLayout *leftLayout = new QVBoxLayout;
     leftWidget->setLayout(leftLayout);
@@ -74,10 +113,6 @@ MainWindow::MainWindow(QWidget *parent)
     QGroupBox *serverBox = new QGroupBox(tr("Server"));
     serverBox->setLayout(new QHBoxLayout);
     serverBox->layout()->addWidget(m_serverPath);
-    serverBox->layout()->addWidget(new QLabel(tr("Players:")));
-    m_players->setMinimum(1);
-    m_players->setMaximum(8);
-    serverBox->layout()->addWidget(m_players);
     serverBox->layout()->addWidget(new QLabel(tr("Rounds:")));
     m_rounds->setMinimum(1);
     m_rounds->setMaximum(10);
@@ -105,13 +140,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     QSettings settings;
     m_serverPath->setPath(settings.value(SERVERPATH_KEY, "").toString());
-    m_players->setValue(settings.value(PLAYERS_KEY, 4).toInt());
     m_rounds->setValue(settings.value(ROUNDS_KEY, 4).toInt());
     m_mapPath->setPath(settings.value(MAPPATH_KEY, "map1.map").toString());
 
     connect(m_serverPath, SIGNAL(pathChanged(QString)), SLOT(saveSettings()));
     connect(m_mapPath, SIGNAL(pathChanged(QString)), SLOT(saveSettings()));
-    connect(m_players, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
     connect(m_rounds, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
     connect(m_launchButton, SIGNAL(clicked()), SLOT(launchServer()));
     connect(&m_serverProcess, SIGNAL(readyReadStandardError()), SLOT(readServerErr()));
@@ -121,14 +154,13 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-
+    kill();
 }
 
 void MainWindow::saveSettings()
 {
     QSettings settings;
     settings.setValue(SERVERPATH_KEY, m_serverPath->path());
-    settings.setValue(PLAYERS_KEY, m_players->value());
     settings.setValue(ROUNDS_KEY, m_rounds->value());
     settings.setValue(MAPPATH_KEY, m_mapPath->path());
 }
@@ -153,7 +185,7 @@ void MainWindow::launchServer()
 
     QStringList arguments;
     arguments << "server"
-              << QString::number(m_players->value())
+              << QString::number(m_botModel->enabledPlayers())
               << QString::number(m_rounds->value());
 
     QFileInfo mapFile(m_mapPath->path());
@@ -170,16 +202,13 @@ void MainWindow::launchServer()
 void MainWindow::readServerErr()
 {
     QByteArray output = m_serverProcess.readAllStandardError();
-    QColor oldColor = m_serverOutput.textColor();
-    m_serverOutput.setTextColor(Qt::red);
-    m_serverOutput.append(output);
-    m_serverOutput.setTextColor(oldColor);
+    errorOutput(output);
 }
 
 void MainWindow::readServerOut()
 {
     QByteArray output = m_serverProcess.readAllStandardOutput();
-    m_serverOutput.append(output);
+    normalOutput(output);
 }
 
 void MainWindow::addBot()
@@ -204,6 +233,8 @@ void MainWindow::removeBot()
 
 void MainWindow::kill()
 {
+    m_serverProcess.terminate();
+    QThread::usleep(200);
     m_serverProcess.kill();
     m_botModel->killBots();
 }
@@ -219,9 +250,28 @@ void MainWindow::serverFinished(int status)
     QFile resultsLog(m_serverProcess.workingDirectory() + "/scores.log");
     if (!resultsLog.open(QIODevice::ReadOnly)) {
         qWarning() << "unable to open results log!";
-        m_serverOutput.append("Unable to open results log");
         return;
     }
     QByteArray winner = resultsLog.readLine().trimmed();
-    m_botModel->roundOver(QString::fromUtf8(winner));
+    if (winner.isEmpty()) {
+        qWarning() << "NO WINNER FOUND, race aborted?";
+    } else {
+        m_botModel->roundOver(QString::fromUtf8(winner));
+    }
+
+    resultsLog.close();
+    resultsLog.remove();
+}
+
+void MainWindow::errorOutput(QString message)
+{
+    QColor oldColor = m_serverOutput.textColor();
+    m_serverOutput.setTextColor(Qt::red);
+    m_serverOutput.append(message);
+    m_serverOutput.setTextColor(oldColor);
+}
+
+void MainWindow::normalOutput(QString message)
+{
+    m_serverOutput.append(message);
 }

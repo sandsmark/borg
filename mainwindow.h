@@ -19,6 +19,9 @@ public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+    void errorOutput(QString message);
+    void normalOutput(QString message);
+
 private slots:
     void saveSettings();
     void launchServer();
@@ -36,7 +39,6 @@ private:
     QTableView *m_botsView;
     BotModel *m_botModel;
     PathEditor *m_serverPath;
-    QSpinBox *m_players;
     QSpinBox *m_rounds;
     PathEditor *m_mapPath;
     QPushButton *m_launchButton;

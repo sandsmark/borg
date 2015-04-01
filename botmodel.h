@@ -58,6 +58,8 @@ public:
 
     void roundOver(QString name);
 
+    int enabledPlayers();
+
 public slots:
     void launchBots();
     void killBots();

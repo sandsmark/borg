@@ -269,6 +269,17 @@ void BotModel::roundOver(QString name)
     QMessageBox::warning(0, tr("Unable to find winner!"), tr("Unable to find '%1' in the list of bots, please adjust score manually").arg(name));
 }
 
+int BotModel::enabledPlayers()
+{
+    int ret = 0;
+    foreach(const Bot &bot, m_bots) {
+        if (bot.enabled) {
+            ret++;
+        }
+    }
+    return ret;
+}
+
 
 
 QDataStream &operator<<(QDataStream &out, const Bot &bot)
@@ -294,7 +305,6 @@ void BotModel::storeOutput()
         m_bots[i].logfile->write(err);
         QByteArray out = m_bots[i].process->readAllStandardOutput();
         m_bots[i].logfile->write(out);
-        qDebug() << err << out;
         return;
     }
     qWarning() << "Unable to find bot with process" << sender();
