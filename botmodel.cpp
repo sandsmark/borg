@@ -64,13 +64,11 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
 QVariant BotModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role != Qt::DisplayRole) {
-        return false;
-    }
-    if (orientation != Qt::Horizontal) {
-        qWarning() << "sykt lol";
         return QVariant();
     }
-    qDebug() << section;
+    if (orientation != Qt::Horizontal) {
+        return QVariant();
+    }
     switch (section) {
     case Enabled:
         return tr("Enabled");

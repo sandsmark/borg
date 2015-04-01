@@ -86,7 +86,6 @@ MainWindow::MainWindow(QWidget *parent)
     /// Bot list view
     ///
     m_botsView->setItemDelegate(new BotViewDelegate);
-    m_botsView->horizontalHeader()->show();
     m_botsView->setModel(m_botModel);
     m_botsView->resizeColumnsToContents();
     m_botsView->setShowGrid(false);
