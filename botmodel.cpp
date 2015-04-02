@@ -49,12 +49,24 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
         return bot.runtime;
     case Path:
         return bot.path;
+    case Arguments:
+        return bot.arguments;
     case Wins:
         return bot.wins;
     case RoundsPlayed:
         return bot.roundsPlayed;
     case Running:
-        return (bot.process->state() == QProcess::Running) ? tr("Running") : tr("Not running");
+        switch(bot.process->state()) {
+        case QProcess::Running:
+            return tr("Running");
+        case QProcess::Starting:
+            return tr("Starting");
+        case QProcess::NotRunning:
+            return tr("Not running");
+        default:
+            return tr("Unknown");
+        }
+        break;
     default:
         qWarning() << Q_FUNC_INFO << "asked for unknown colum" << column;
         return QVariant("fuck off");
@@ -78,6 +90,8 @@ QVariant BotModel::headerData(int section, Qt::Orientation orientation, int role
         return tr("Runtime");
     case Path:
         return tr("Path");
+    case Arguments:
+        return tr("Arguments");
     case Wins:
         return tr("Wins");
     case RoundsPlayed:
@@ -114,6 +128,8 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
     case Path:
         bot->path = value.toString();
         break;
+    case Arguments:
+        bot->arguments = value.toString();
     case Wins:
         bot->wins = value.toInt();
         break;
@@ -170,6 +186,7 @@ void BotModel::launchBots()
                 arguments << "-jar";
             }
             arguments << m_bots[i].path;
+            arguments << m_bots[i].arguments.split(' ');
             m_bots[i].process->start(runtimes()[m_bots[i].runtime], arguments);
         }
     }
@@ -317,14 +334,14 @@ int BotModel::enabledPlayers()
 
 QDataStream &operator<<(QDataStream &out, const Bot &bot)
 {
-    out << bot.enabled << bot.name << bot.path << bot.runtime << bot.wins << bot.roundsPlayed;
+    out << bot.enabled << bot.name << bot.path << bot.arguments << bot.runtime << bot.wins << bot.roundsPlayed;
     return out;
 }
 
 
 QDataStream &operator>>(QDataStream &in, Bot &bot)
 {
-    in >> bot.enabled >> bot.name >> bot.path >> bot.runtime >> bot.wins >> bot.roundsPlayed;
+    in >> bot.enabled >> bot.name >> bot.path >> bot.arguments >> bot.runtime >> bot.wins >> bot.roundsPlayed;
     return in;
 }
 
@@ -336,12 +353,12 @@ void BotModel::storeOutput()
 
         QByteArray err = m_bots[i].process->readAllStandardError();
         if (!err.isEmpty()) {
-            qWarning() << m_bots[i].process->program() << err;
+        //    qWarning() << m_bots[i].process->program() << err;
         }
         m_bots[i].logfile->write(err);
         QByteArray out = m_bots[i].process->readAllStandardOutput();
         if (!out.isEmpty()) {
-            qDebug() << m_bots[i].process->program() << out;
+        //    qDebug() << m_bots[i].process->program() << out;
         }
         m_bots[i].logfile->write(out);
         return;

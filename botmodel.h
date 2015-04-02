@@ -14,6 +14,7 @@ struct Bot {
     QString name;
     QString runtime;
     QString path;
+    QString arguments;
     int wins;
     int roundsPlayed;
     QSharedPointer<QProcess> process;
@@ -35,6 +36,7 @@ public:
         Name,
         Runtime,
         Path,
+        Arguments,
         Wins,
         RoundsPlayed,
         Running
@@ -44,7 +46,7 @@ public:
     ~BotModel();
 
     int rowCount(const QModelIndex &) const { return m_bots.length(); }
-    int columnCount(const QModelIndex &) const { return 7; }
+    int columnCount(const QModelIndex &) const { return 8; }
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
