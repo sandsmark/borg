@@ -73,7 +73,7 @@ MainWindow::MainWindow(QWidget *parent)
       m_launchButton(new QPushButton(tr("&Launch server"))),
       m_logFile("BORG.log")
 {
-    m_logFile.open(QIODevice::ReadOnly | QIODevice::Append);
+    m_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
 
     instance = this;
     qInstallMessageHandler(messageHandler);
@@ -143,7 +143,7 @@ MainWindow::MainWindow(QWidget *parent)
     ///////////
     /// Kill button
     ///
-    QPushButton *killButton = new QPushButton(tr("&Kill"));
+    QPushButton *killButton = new QPushButton(tr("Kill"));
     connect(killButton, SIGNAL(clicked()), SLOT(kill()));
     leftLayout->addWidget(killButton);
 
@@ -183,6 +183,13 @@ void MainWindow::saveSettings()
 
 void MainWindow::launchServer()
 {
+    if (m_logFile.isOpen()) {
+        m_logFile.close();
+    }
+    m_logFile.setFileName(QDateTime::currentDateTime().toString(Qt::ISODate) + ".log");
+    m_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
+    m_logFile.write("Starting " + m_name.text().toUtf8() + "\n");
+
     if (m_serverProcess.state() == QProcess::Running) {
         QMessageBox::warning(this, tr("Server already running"), tr("The server executable is still running"));
         return;
@@ -259,6 +266,10 @@ void MainWindow::serverFinished(int status)
 {
     m_botModel->killBots();
 
+    m_logFile.close();
+    m_logFile.setFileName("BORG.log");
+    m_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
+
     qWarning() << m_name.text() << "finished";
 
     if (status != 0) {
@@ -275,11 +286,14 @@ void MainWindow::serverFinished(int status)
     if (winner.isEmpty()) {
         qWarning() << "NO WINNER FOUND, race aborted?";
     } else {
+        qWarning() << "Winner:" << winner;
         m_botModel->roundOver(QString::fromUtf8(winner));
     }
 
     resultsLog.close();
     resultsLog.remove();
+
+    updateName();
 }
 
 void MainWindow::updateName()
@@ -298,7 +312,7 @@ void MainWindow::errorOutput(QString message)
     m_serverOutput.setTextColor(oldColor);
 
     if (m_logFile.isOpen()) {
-        m_logFile.write(message.toUtf8());
+        m_logFile.write(message.toUtf8() + "\n");
     }
 }
 
@@ -307,6 +321,6 @@ void MainWindow::normalOutput(QString message)
     m_serverOutput.append(message);
 
     if (m_logFile.isOpen()) {
-        m_logFile.write(message.toUtf8());
+        m_logFile.write(message.toUtf8() + "\n");
     }
 }
