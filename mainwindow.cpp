@@ -20,6 +20,7 @@
 #include <QTimer>
 #include <QLabel>
 #include <QThread>
+#include <QTime>
 
 #define SERVERPATH_KEY "serverpath"
 #define PLAYERS_KEY    "players"
@@ -69,8 +70,11 @@ MainWindow::MainWindow(QWidget *parent)
       m_serverPath(new PathEditor),
       m_rounds(new QSpinBox),
       m_mapPath(new PathEditor),
-      m_launchButton(new QPushButton(tr("&Launch server")))
+      m_launchButton(new QPushButton(tr("&Launch server"))),
+      m_logFile("BORG.log")
 {
+    m_logFile.open(QIODevice::ReadOnly | QIODevice::Append);
+
     instance = this;
     qInstallMessageHandler(messageHandler);
 
@@ -81,6 +85,19 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_serverOutput.setReadOnly(true);
     addWidget(&m_serverOutput);
+
+    QFile nameFile("names.txt");
+    if (nameFile.open(QIODevice::ReadOnly)) {
+        m_names = nameFile.readAll().trimmed().split('\n');
+        qsrand(QTime::currentTime().msec());
+        QFont f( "Arial", 10, QFont::Bold);
+        m_name.setFont(f);
+    } else {
+        qDebug() << "Unable to open map file" << nameFile.errorString();
+    }
+    m_name.setText("...");
+    updateName();
+    leftLayout->addWidget(&m_name);
 
     ///////////
     /// Bot list view
@@ -242,12 +259,15 @@ void MainWindow::serverFinished(int status)
 {
     m_botModel->killBots();
 
+    qWarning() << m_name.text() << "finished";
+
     if (status != 0) {
         qWarning() << "Server finished with unclean status" << status;
         m_serverOutput.append(QStringLiteral("Server finished with unclean status %1!\n").arg(status));
     }
     QFile resultsLog(m_serverProcess.workingDirectory() + "/scores.log");
     if (!resultsLog.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("Unable to open server log"), tr("Unable to open server log with results"));
         qWarning() << "unable to open results log!";
         return;
     }
@@ -262,15 +282,31 @@ void MainWindow::serverFinished(int status)
     resultsLog.remove();
 }
 
+void MainWindow::updateName()
+{
+    if (m_names.isEmpty()) {
+        return;
+    }
+    m_name.setText("Round: " + m_names[qrand() % m_names.size()]);
+}
+
 void MainWindow::errorOutput(QString message)
 {
     QColor oldColor = m_serverOutput.textColor();
     m_serverOutput.setTextColor(Qt::red);
     m_serverOutput.append(message);
     m_serverOutput.setTextColor(oldColor);
+
+    if (m_logFile.isOpen()) {
+        m_logFile.write(message.toUtf8());
+    }
 }
 
 void MainWindow::normalOutput(QString message)
 {
     m_serverOutput.append(message);
+
+    if (m_logFile.isOpen()) {
+        m_logFile.write(message.toUtf8());
+    }
 }

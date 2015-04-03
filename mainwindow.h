@@ -5,6 +5,7 @@
 #include <QTableView>
 #include <QProcess>
 #include <QTextEdit>
+#include <QLabel>
 #include "botmodel.h"
 #include "patheditor.h"
 
@@ -35,6 +36,8 @@ private slots:
     void kill();
     void serverFinished(int status);
 
+    void updateName();
+
 private:
     QTableView *m_botsView;
     BotModel *m_botModel;
@@ -44,6 +47,9 @@ private:
     QPushButton *m_launchButton;
     QProcess m_serverProcess;
     QTextEdit m_serverOutput;
+    QList<QByteArray> m_names;
+    QLabel m_name;
+    QFile m_logFile;
 };
 
 #endif // MAINWINDOW_H
