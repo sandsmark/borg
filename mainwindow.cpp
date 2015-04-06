@@ -90,7 +90,7 @@ MainWindow::MainWindow(QWidget *parent)
     if (nameFile.open(QIODevice::ReadOnly)) {
         m_names = nameFile.readAll().trimmed().split('\n');
         qsrand(QTime::currentTime().msec());
-        QFont f( "Arial", 10, QFont::Bold);
+        QFont f( "Arial", 20, QFont::Bold);
         m_name.setFont(f);
     } else {
         qDebug() << "Unable to open map file" << nameFile.errorString();
