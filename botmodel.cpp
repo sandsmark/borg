@@ -187,6 +187,7 @@ void BotModel::launchBots()
             }
             arguments << m_bots[i].path;
             arguments << m_bots[i].arguments.split(' ');
+            qDebug() << "launching" << runtimes()[m_bots[i].runtime] << arguments;
             m_bots[i].process->start(runtimes()[m_bots[i].runtime], arguments);
         }
     }
