@@ -44,7 +44,6 @@ private:
     BotModel *m_botModel;
     PathEditor *m_serverPath;
     QSpinBox *m_rounds;
-    QSpinBox *m_players;
     QSpinBox *m_tickInterval;
     QCheckBox *m_autoLaunch;
     QCheckBox *m_autoQuit;

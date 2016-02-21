@@ -25,7 +25,6 @@
 #include <QTime>
 
 #define SERVERPATH_KEY    "serverpath"
-#define PLAYERS_KEY       "players"
 #define ROUNDS_KEY        "rounds"
 #define AUTOSTART_KEY     "autostart"
 #define AUTOQUIT_KEY      "autoquit"
@@ -146,7 +145,7 @@ MainWindow::MainWindow(QWidget *parent)
     serverLaunch->setLayout(new QHBoxLayout);
     serverBox->layout()->addWidget(serverLaunch);
     // Launch button
-    m_launchButton = new QPushButton(tr("&Launch server"));
+    m_launchButton = new QPushButton(tr("&Start server"));
     serverLaunch->layout()->addWidget(m_launchButton);
     // Server path editor
     m_serverPath = new PathEditor,
@@ -169,13 +168,6 @@ MainWindow::MainWindow(QWidget *parent)
     m_rounds->setSuffix(tr(" rounds"));
     serverSettings->layout()->addWidget(m_rounds);
     m_rounds->setValue(settings.value(ROUNDS_KEY, 4).toInt());
-    // Player count editor
-    m_players = new QSpinBox;
-    m_players->setMinimum(1);
-    m_players->setMaximum(4);
-    m_players->setSuffix(tr(" players"));
-    serverSettings->layout()->addWidget(m_players);
-    m_players->setValue(settings.value(PLAYERS_KEY, 4).toInt());
     // Tick interval editor
     m_tickInterval = new QSpinBox;
     m_tickInterval->setMinimum(10);
@@ -217,7 +209,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_serverPath, SIGNAL(pathChanged(QString)), SLOT(saveSettings()));
     connect(m_rounds, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
-    connect(m_players, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
     connect(m_autoLaunch, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
     connect(m_autoQuit, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
     connect(m_tickInterval, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
@@ -241,7 +232,6 @@ void MainWindow::saveSettings()
 {
     QSettings settings;
     settings.setValue(SERVERPATH_KEY, m_serverPath->path());
-    settings.setValue(PLAYERS_KEY, m_players->value());
     settings.setValue(ROUNDS_KEY, m_rounds->value());
     settings.setValue(AUTOSTART_KEY, m_autoLaunch->isChecked());
     settings.setValue(AUTOQUIT_KEY, m_autoQuit->isChecked());
@@ -252,6 +242,11 @@ void MainWindow::saveSettings()
 
 void MainWindow::launchServer()
 {
+//    if (m_botModel->enabledPlayers() > 4 || m_botModel->enabledPlayers() < 1) {
+//        QMessageBox::warning(this, tr("Invalid number of players"), tr("Either too few or too many players enabled"));
+//        return;
+//    }
+
     if (m_logFile.isOpen()) {
         m_logFile.close();
     }
@@ -276,9 +271,21 @@ void MainWindow::launchServer()
     }
 
     QStringList arguments;
-    arguments << "server"
-              << QString::number(m_botModel->enabledPlayers())
-              << QString::number(m_rounds->value());
+    arguments << "--tick-interval" << QString::number(m_tickInterval->value());
+    arguments << "--rounds" << QString::number(m_rounds->value());
+
+    if (m_autoLaunch->isChecked()) {
+        arguments << "--start-at" << QString::number(m_botModel->enabledPlayers());
+    }
+    if (m_autoQuit->isChecked()) {
+        arguments << "--quit-on-finish";
+    }
+    if (m_fullscreen->isChecked()) {
+        arguments << "--fullscreen";
+    }
+    if (m_headless->isChecked()) {
+        arguments << "--headless";
+    }
 
     m_serverProcess.setWorkingDirectory(serverExecutable.path());
     m_serverProcess.start(serverExecutable.filePath(), arguments);
@@ -340,7 +347,7 @@ void MainWindow::serverFinished(int status)
         qWarning() << "Server finished with unclean status" << status;
         m_serverOutput.append(QStringLiteral("Server finished with unclean status %1!\n").arg(status));
     }
-    QFile resultsLog(m_serverProcess.workingDirectory() + "/scores.log");
+    QFile resultsLog(m_serverProcess.workingDirectory() + "/scores.txt");
     if (!resultsLog.open(QIODevice::ReadOnly)) {
         QMessageBox::warning(this, tr("Unable to open server log"), tr("Unable to open server log with results"));
         qWarning() << "unable to open results log!";
