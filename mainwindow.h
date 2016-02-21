@@ -11,6 +11,7 @@
 
 class QSpinBox;
 class QPushButton;
+class QCheckBox;
 
 class MainWindow : public QSplitter
 {
@@ -43,6 +44,12 @@ private:
     BotModel *m_botModel;
     PathEditor *m_serverPath;
     QSpinBox *m_rounds;
+    QSpinBox *m_players;
+    QSpinBox *m_tickInterval;
+    QCheckBox *m_autoLaunch;
+    QCheckBox *m_autoQuit;
+    QCheckBox *m_fullscreen;
+    QCheckBox *m_headless;
     QPushButton *m_launchButton;
     QProcess m_serverProcess;
     QTextEdit m_serverOutput;

@@ -16,9 +16,11 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     botmodel.cpp \
     botviewdelegate.cpp \
-    patheditor.cpp
+    patheditor.cpp \
+    spinbox.cpp
 
 HEADERS  += mainwindow.h \
     botmodel.h \
     botviewdelegate.h \
-    patheditor.h
+    patheditor.h \
+    spinbox.h

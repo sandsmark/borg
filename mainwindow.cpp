@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 #include "botviewdelegate.h"
+#include "spinbox.h"
+
 #include <QHeaderView>
 #include <QItemDelegate>
 #include <QItemEditorFactory>
@@ -10,11 +12,11 @@
 #include <QApplication>
 #include <QGroupBox>
 #include <QSettings>
-#include <QSpinBox>
 #include <QPushButton>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
+#include <QCheckBox>
 #include <QDebug>
 #include <QFileDialog>
 #include <QTimer>
@@ -22,9 +24,14 @@
 #include <QThread>
 #include <QTime>
 
-#define SERVERPATH_KEY "serverpath"
-#define PLAYERS_KEY    "players"
-#define ROUNDS_KEY     "rounds"
+#define SERVERPATH_KEY    "serverpath"
+#define PLAYERS_KEY       "players"
+#define ROUNDS_KEY        "rounds"
+#define AUTOSTART_KEY     "autostart"
+#define AUTOQUIT_KEY      "autoquit"
+#define TICKINTERVAL_KEY  "tickinterval"
+#define FULLSCREEN_KEY    "fullscreen"
+#define HEADLESS_KEY      "headless"
 
 static MainWindow *instance = 0;
 
@@ -68,9 +75,6 @@ MainWindow::MainWindow(QWidget *parent)
     : QSplitter(parent),
       m_botsView(new QTableView(this)),
       m_botModel(new BotModel(this)),
-      m_serverPath(new PathEditor),
-      m_rounds(new QSpinBox),
-      m_launchButton(new QPushButton(tr("&Launch server"))),
       m_logFile("BORG.log")
 {
     m_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
@@ -78,14 +82,19 @@ MainWindow::MainWindow(QWidget *parent)
     instance = this;
     qInstallMessageHandler(messageHandler);
 
+    QSettings settings;
+
+    // Left/right split
     QWidget *leftWidget = new QWidget;
     QLayout *leftLayout = new QVBoxLayout;
     leftWidget->setLayout(leftLayout);
     addWidget(leftWidget);
 
+    // Log/output view
     m_serverOutput.setReadOnly(true);
     addWidget(&m_serverOutput);
 
+    // Round names
     QFile nameFile("names.txt");
     if (nameFile.open(QIODevice::ReadOnly)) {
         m_names = nameFile.readAll().trimmed().split('\n');
@@ -127,24 +136,75 @@ MainWindow::MainWindow(QWidget *parent)
     /// Server control
     ///
     QGroupBox *serverBox = new QGroupBox(tr("Server"));
-    serverBox->setLayout(new QHBoxLayout);
-    serverBox->layout()->addWidget(m_serverPath);
-    serverBox->layout()->addWidget(new QLabel(tr("Rounds:")));
-    m_rounds->setMinimum(1);
-    m_rounds->setMaximum(10);
-    serverBox->layout()->addWidget(m_rounds);
-    serverBox->layout()->addWidget(m_launchButton);
+    serverBox->setLayout(new QVBoxLayout);
     leftLayout->addWidget(serverBox);
 
-
-    leftLayout->addItem(new QSpacerItem(0, 50));
+    ///////////
+    /// Server launch
+    ///
+    QWidget *serverLaunch = new QWidget;
+    serverLaunch->setLayout(new QHBoxLayout);
+    serverBox->layout()->addWidget(serverLaunch);
+    // Launch button
+    m_launchButton = new QPushButton(tr("&Launch server"));
+    serverLaunch->layout()->addWidget(m_launchButton);
+    // Server path editor
+    m_serverPath = new PathEditor,
+    serverLaunch->layout()->addWidget(m_serverPath);
+    m_serverPath->setPath(settings.value(SERVERPATH_KEY, "").toString());
+    // Kill button
+    QPushButton *killButton = new QPushButton(tr("&Kill server"));
+    serverLaunch->layout()->addWidget(killButton);
 
     ///////////
-    /// Kill button
+    /// Server settings
     ///
-    QPushButton *killButton = new QPushButton(tr("Kill"));
-    connect(killButton, SIGNAL(clicked()), SLOT(kill()));
-    leftLayout->addWidget(killButton);
+    QWidget *serverSettings = new QWidget;
+    serverSettings->setLayout(new QHBoxLayout);
+    serverBox->layout()->addWidget(serverSettings);
+    // Round count editor
+    m_rounds = new QSpinBox;
+    m_rounds->setMinimum(1);
+    m_rounds->setMaximum(10);
+    m_rounds->setSuffix(tr(" rounds"));
+    serverSettings->layout()->addWidget(m_rounds);
+    m_rounds->setValue(settings.value(ROUNDS_KEY, 4).toInt());
+    // Player count editor
+    m_players = new QSpinBox;
+    m_players->setMinimum(1);
+    m_players->setMaximum(4);
+    m_players->setSuffix(tr(" players"));
+    serverSettings->layout()->addWidget(m_players);
+    m_players->setValue(settings.value(PLAYERS_KEY, 4).toInt());
+    // Tick interval editor
+    m_tickInterval = new QSpinBox;
+    m_tickInterval->setMinimum(10);
+    m_tickInterval->setMaximum(1000);
+    m_tickInterval->setSuffix(" ms ticks");
+    serverSettings->layout()->addWidget(m_tickInterval);
+    m_tickInterval->setValue(settings.value(TICKINTERVAL_KEY, 50).toInt());
+    // Autostart checkbox
+    m_autoLaunch = new QCheckBox(tr("Start automatically"));
+    serverSettings->layout()->addWidget(m_autoLaunch);
+    m_autoLaunch->setChecked(settings.value(AUTOSTART_KEY, false).toBool());
+    // Autoquit checkbox
+    m_autoQuit = new QCheckBox(tr("Quit on game over"));
+    serverSettings->layout()->addWidget(m_autoQuit);
+    m_autoQuit->setChecked(settings.value(AUTOQUIT_KEY, false).toBool());
+    // Fullscreen checkbox
+    m_fullscreen = new QCheckBox(tr("Fullscreen"));
+    serverSettings->layout()->addWidget(m_fullscreen);
+    m_fullscreen->setChecked(settings.value(FULLSCREEN_KEY, false).toBool());
+    // Headless checkbox
+    m_headless = new QCheckBox(tr("Headless mode"));
+    serverSettings->layout()->addWidget(m_headless);
+    m_headless->setChecked(settings.value(HEADLESS_KEY, false).toBool());
+
+    // Some spacing to align things to the left
+    serverSettings->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
+
+    // Some spacing to quit and kill buttons
+    leftLayout->addItem(new QSpacerItem(0, 50));
 
     ///////////
     /// Quit button
@@ -153,12 +213,17 @@ MainWindow::MainWindow(QWidget *parent)
     connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
     leftLayout->addWidget(quitButton);
 
-    QSettings settings;
-    m_serverPath->setPath(settings.value(SERVERPATH_KEY, "").toString());
-    m_rounds->setValue(settings.value(ROUNDS_KEY, 4).toInt());
+    connect(killButton, SIGNAL(clicked()), SLOT(kill()));
 
     connect(m_serverPath, SIGNAL(pathChanged(QString)), SLOT(saveSettings()));
     connect(m_rounds, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
+    connect(m_players, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
+    connect(m_autoLaunch, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
+    connect(m_autoQuit, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
+    connect(m_tickInterval, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
+    connect(m_fullscreen, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
+    connect(m_headless, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
+
     connect(m_launchButton, SIGNAL(clicked()), SLOT(launchServer()));
     connect(&m_serverProcess, SIGNAL(readyReadStandardError()), SLOT(readServerErr()));
     connect(&m_serverProcess, SIGNAL(readyReadStandardOutput()), SLOT(readServerOut()));
@@ -176,7 +241,13 @@ void MainWindow::saveSettings()
 {
     QSettings settings;
     settings.setValue(SERVERPATH_KEY, m_serverPath->path());
+    settings.setValue(PLAYERS_KEY, m_players->value());
     settings.setValue(ROUNDS_KEY, m_rounds->value());
+    settings.setValue(AUTOSTART_KEY, m_autoLaunch->isChecked());
+    settings.setValue(AUTOQUIT_KEY, m_autoQuit->isChecked());
+    settings.setValue(TICKINTERVAL_KEY, m_tickInterval->value());
+    settings.setValue(FULLSCREEN_KEY, m_fullscreen->isChecked());
+    settings.setValue(HEADLESS_KEY, m_headless->isChecked());
 }
 
 void MainWindow::launchServer()
