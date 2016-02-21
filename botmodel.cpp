@@ -52,7 +52,11 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
     case Runtime:
         return bot.runtime;
     case Path:
-        return bot.path;
+        if (bot.path.length() > 20) {
+            return QStringLiteral("...") + bot.path.right(20);
+        } else {
+            return bot.path;
+        }
     case Arguments:
         return bot.arguments;
     case Wins:
