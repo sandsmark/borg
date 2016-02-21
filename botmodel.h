@@ -68,6 +68,8 @@ public:
 
     QStringList topPlayers();
 
+    void resetBots();
+
 public slots:
     void launchBots();
     void killBots();

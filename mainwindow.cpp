@@ -204,9 +204,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
     leftLayout->addWidget(quitButton);
 
-    // Right part of window
+    ///////////
+    /// Right part of window
+    ///
     QWidget *rightWidget = new QWidget;
     rightWidget->setLayout(new QVBoxLayout);
+    addWidget(rightWidget);
     // Top players list
     m_topPlayers.setText("<h3>Top players</h3><ol><li>...</li></ol>");
     rightWidget->layout()->addWidget(&m_topPlayers);
@@ -214,7 +217,9 @@ MainWindow::MainWindow(QWidget *parent)
     // Log/output view
     m_serverOutput.setReadOnly(true);
     rightWidget->layout()->addWidget(&m_serverOutput);
-    addWidget(rightWidget);
+    // Reset button
+    QPushButton *resetButton = new QPushButton(tr("Reset"));
+    rightWidget->layout()->addWidget(resetButton);
 
     // Connections
     connect(killButton, SIGNAL(clicked()), SLOT(kill()));
@@ -228,6 +233,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_headless, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
 
     connect(m_launchButton, SIGNAL(clicked()), SLOT(launchServer()));
+    connect(resetButton, SIGNAL(clicked()), SLOT(resetBots()));
     connect(&m_serverProcess, SIGNAL(readyReadStandardError()), SLOT(readServerErr()));
     connect(&m_serverProcess, SIGNAL(readyReadStandardOutput()), SLOT(readServerOut()));
     connect(&m_serverProcess, SIGNAL(finished(int)), SLOT(serverFinished(int)));
@@ -402,6 +408,18 @@ void MainWindow::updateName()
         return;
     }
     m_name.setText("Game: " + m_names[qrand() % m_names.size()] + " (" + QString::number(m_roundsPlayed) + ")");
+}
+
+void MainWindow::resetBots()
+{
+    if (QMessageBox::question(this, tr("Really reset?"), tr("Are you sure you want to reset everything?")) == QMessageBox::No) {
+        return;
+    }
+    m_roundsPlayed = 0;
+    saveSettings();
+    m_botModel->resetBots();
+    updateName();
+    updateTopPlayers();
 }
 
 void MainWindow::updateTopPlayers()

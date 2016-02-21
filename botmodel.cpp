@@ -35,6 +35,8 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
 
     if (role == Qt::CheckStateRole && column == Enabled) {
         return m_bots[row].enabled ? Qt::Checked : Qt::Unchecked;
+    } else if (role == Qt::TextAlignmentRole && (column == Wins || column == RoundWins || column == TotalScore || column == RoundsPlayed)) {
+        return Qt::AlignCenter;
     } else if (role != Qt::DisplayRole) {
         return QVariant();
     }
@@ -43,7 +45,8 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
 
     switch (column) {
     case Enabled:
-        return bot.enabled ? tr("Enabled") : tr("Disabled");
+        return QVariant();
+        //return bot.enabled ? tr("Enabled") : tr("Disabled");
     case Name:
         return bot.name;
     case Runtime:
@@ -98,9 +101,9 @@ QVariant BotModel::headerData(int section, Qt::Orientation orientation, int role
     case Arguments:
         return tr("Arguments");
     case Wins:
-        return tr("Wins");
-    case RoundWins:
         return tr("Games won");
+    case RoundWins:
+        return tr("Rounds won");
     case TotalScore:
         return tr("Total points");
     case RoundsPlayed:
@@ -366,6 +369,18 @@ QStringList BotModel::topPlayers()
         names.append(bots[i]->name);
     }
     return names;
+}
+
+void BotModel::resetBots()
+{
+    for (int i=0; i<m_bots.count(); i++) {
+        m_bots[i].roundsPlayed = 0;
+        m_bots[i].roundWins = 0;
+        m_bots[i].totalScore = 0;
+        m_bots[i].wins = 0;
+    }
+    botStateChanged();
+    save();
 }
 
 

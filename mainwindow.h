@@ -39,6 +39,8 @@ private slots:
 
     void updateName();
 
+    void resetBots();
+
 private:
     void updateTopPlayers();
 
