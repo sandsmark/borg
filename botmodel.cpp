@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QMessageBox>
 #include <QSettings>
+#include <algorithm>
 
 #define BOTS_KEY "bots"
 
@@ -338,6 +339,33 @@ int BotModel::enabledPlayers()
         }
     }
     return ret;
+}
+
+bool compareBots(Bot *a, const Bot *b)
+{
+    if (a->wins != b->wins) {
+        return a->wins > b->wins;
+    } else if (a->roundWins != b->roundWins) {
+        return a->roundWins > b->roundWins;
+    } else {
+        return a->totalScore > b->totalScore;
+    }
+}
+
+QStringList BotModel::topPlayers()
+{
+    QList<Bot*> bots;
+
+    for (int i=0; i<m_bots.count(); i++) {
+        bots.append(&m_bots[i]);
+    }
+    std::sort(bots.begin(), bots.end(), compareBots);
+
+    QStringList names;
+    for (int i=0; i<qMin(bots.count(), 3); i++) {
+        names.append(bots[i]->name);
+    }
+    return names;
 }
 
 

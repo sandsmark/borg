@@ -83,15 +83,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     QSettings settings;
 
-    // Left/right split
+    // Left part of window
     QWidget *leftWidget = new QWidget;
     QLayout *leftLayout = new QVBoxLayout;
     leftWidget->setLayout(leftLayout);
     addWidget(leftWidget);
-
-    // Log/output view
-    m_serverOutput.setReadOnly(true);
-    addWidget(&m_serverOutput);
 
     // Round names
     QFile nameFile("names.txt");
@@ -206,6 +202,19 @@ MainWindow::MainWindow(QWidget *parent)
     connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
     leftLayout->addWidget(quitButton);
 
+    // Right part of window
+    QWidget *rightWidget = new QWidget;
+    rightWidget->setLayout(new QVBoxLayout);
+    // Top players list
+    m_topPlayers.setText("<h3>Top players</h3><ol><li>...</li></ol>");
+    rightWidget->layout()->addWidget(&m_topPlayers);
+    updateTopPlayers();
+    // Log/output view
+    m_serverOutput.setReadOnly(true);
+    rightWidget->layout()->addWidget(&m_serverOutput);
+    addWidget(rightWidget);
+
+    // Connections
     connect(killButton, SIGNAL(clicked()), SLOT(kill()));
 
     connect(m_serverPath, SIGNAL(pathChanged(QString)), SLOT(saveSettings()));
@@ -378,6 +387,7 @@ void MainWindow::serverFinished(int status)
         QMessageBox::warning(this, tr("Missing players"), tr("Missing players from the scores.txt, please adjust manually"));
     }
 
+    updateTopPlayers();
     updateName();
 }
 
@@ -387,6 +397,18 @@ void MainWindow::updateName()
         return;
     }
     m_name.setText("Round: " + m_names[qrand() % m_names.size()]);
+}
+
+void MainWindow::updateTopPlayers()
+{
+    QString labelContent("<h3>Top players:</h3><ol>");
+
+    foreach(const QString name, m_botModel->topPlayers()) {
+        labelContent += QString("<li>%1</li>").arg(name);
+    }
+
+    labelContent += "</ol><br>";
+    m_topPlayers.setText(labelContent);
 }
 
 void MainWindow::errorOutput(QString message)

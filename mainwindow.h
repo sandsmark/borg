@@ -40,6 +40,8 @@ private slots:
     void updateName();
 
 private:
+    void updateTopPlayers();
+
     QTableView *m_botsView;
     BotModel *m_botModel;
     PathEditor *m_serverPath;
@@ -55,6 +57,7 @@ private:
     QList<QByteArray> m_names;
     QLabel m_name;
     QFile m_logFile;
+    QLabel m_topPlayers;
 };
 
 #endif // MAINWINDOW_H
