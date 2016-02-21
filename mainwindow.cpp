@@ -31,6 +31,7 @@
 #define TICKINTERVAL_KEY  "tickinterval"
 #define FULLSCREEN_KEY    "fullscreen"
 #define HEADLESS_KEY      "headless"
+#define ROUNDSPLAYED_KEY  "headless"
 
 static MainWindow *instance = 0;
 
@@ -82,6 +83,7 @@ MainWindow::MainWindow(QWidget *parent)
     qInstallMessageHandler(messageHandler);
 
     QSettings settings;
+    m_roundsPlayed = settings.value(ROUNDSPLAYED_KEY, 0).toInt();
 
     // Left part of window
     QWidget *leftWidget = new QWidget;
@@ -248,6 +250,7 @@ void MainWindow::saveSettings()
     settings.setValue(TICKINTERVAL_KEY, m_tickInterval->value());
     settings.setValue(FULLSCREEN_KEY, m_fullscreen->isChecked());
     settings.setValue(HEADLESS_KEY, m_headless->isChecked());
+    settings.setValue(ROUNDSPLAYED_KEY, m_roundsPlayed);
 }
 
 void MainWindow::launchServer()
@@ -387,8 +390,10 @@ void MainWindow::serverFinished(int status)
         QMessageBox::warning(this, tr("Missing players"), tr("Missing players from the scores.txt, please adjust manually"));
     }
 
+    m_roundsPlayed++;
     updateTopPlayers();
     updateName();
+    saveSettings();
 }
 
 void MainWindow::updateName()
@@ -396,7 +401,7 @@ void MainWindow::updateName()
     if (m_names.isEmpty()) {
         return;
     }
-    m_name.setText("Round: " + m_names[qrand() % m_names.size()]);
+    m_name.setText("Game: " + m_names[qrand() % m_names.size()] + " (" + QString::number(m_roundsPlayed) + ")");
 }
 
 void MainWindow::updateTopPlayers()

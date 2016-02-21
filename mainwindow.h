@@ -58,6 +58,7 @@ private:
     QLabel m_name;
     QFile m_logFile;
     QLabel m_topPlayers;
+    int m_roundsPlayed;
 };
 
 #endif // MAINWINDOW_H
