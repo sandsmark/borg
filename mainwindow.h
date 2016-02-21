@@ -43,7 +43,6 @@ private:
     BotModel *m_botModel;
     PathEditor *m_serverPath;
     QSpinBox *m_rounds;
-    PathEditor *m_mapPath;
     QPushButton *m_launchButton;
     QProcess m_serverProcess;
     QTextEdit m_serverOutput;

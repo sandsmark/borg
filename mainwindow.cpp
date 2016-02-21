@@ -25,7 +25,6 @@
 #define SERVERPATH_KEY "serverpath"
 #define PLAYERS_KEY    "players"
 #define ROUNDS_KEY     "rounds"
-#define MAPPATH_KEY    "mappath"
 
 static MainWindow *instance = 0;
 
@@ -35,9 +34,6 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
 
     if (instance) {
         switch (type) {
-        case QtDebugMsg:
-            instance->normalOutput(msg);
-            break;
         case QtWarningMsg:
         case QtCriticalMsg:
             instance->errorOutput(msg);
@@ -45,12 +41,13 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
         case QtFatalMsg:
             fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
             abort();
+        case QtDebugMsg:
+        default:
+            instance->normalOutput(msg);
+            break;
         }
     }
     switch (type) {
-    case QtDebugMsg:
-        fprintf(stderr, "Debug: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
     case QtWarningMsg:
         fprintf(stderr, "Warning: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
         break;
@@ -60,6 +57,10 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
     case QtFatalMsg:
         fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
         abort();
+    case QtDebugMsg:
+    default:
+        fprintf(stderr, "Debug: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
+        break;
     }
 }
 
@@ -69,7 +70,6 @@ MainWindow::MainWindow(QWidget *parent)
       m_botModel(new BotModel(this)),
       m_serverPath(new PathEditor),
       m_rounds(new QSpinBox),
-      m_mapPath(new PathEditor),
       m_launchButton(new QPushButton(tr("&Launch server"))),
       m_logFile("BORG.log")
 {
@@ -93,7 +93,7 @@ MainWindow::MainWindow(QWidget *parent)
         QFont f( "Arial", 20, QFont::Bold);
         m_name.setFont(f);
     } else {
-        qDebug() << "Unable to open map file" << nameFile.errorString();
+        qDebug() << "Unable to open names file" << nameFile.errorString();
     }
     m_name.setText("...");
     updateName();
@@ -133,7 +133,6 @@ MainWindow::MainWindow(QWidget *parent)
     m_rounds->setMinimum(1);
     m_rounds->setMaximum(10);
     serverBox->layout()->addWidget(m_rounds);
-    serverBox->layout()->addWidget(m_mapPath);
     serverBox->layout()->addWidget(m_launchButton);
     leftLayout->addWidget(serverBox);
 
@@ -157,15 +156,15 @@ MainWindow::MainWindow(QWidget *parent)
     QSettings settings;
     m_serverPath->setPath(settings.value(SERVERPATH_KEY, "").toString());
     m_rounds->setValue(settings.value(ROUNDS_KEY, 4).toInt());
-    m_mapPath->setPath(settings.value(MAPPATH_KEY, "map1.map").toString());
 
     connect(m_serverPath, SIGNAL(pathChanged(QString)), SLOT(saveSettings()));
-    connect(m_mapPath, SIGNAL(pathChanged(QString)), SLOT(saveSettings()));
     connect(m_rounds, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
     connect(m_launchButton, SIGNAL(clicked()), SLOT(launchServer()));
     connect(&m_serverProcess, SIGNAL(readyReadStandardError()), SLOT(readServerErr()));
     connect(&m_serverProcess, SIGNAL(readyReadStandardOutput()), SLOT(readServerOut()));
     connect(&m_serverProcess, SIGNAL(finished(int)), SLOT(serverFinished(int)));
+
+    resize(1920, 1200);
 }
 
 MainWindow::~MainWindow()
@@ -178,7 +177,6 @@ void MainWindow::saveSettings()
     QSettings settings;
     settings.setValue(SERVERPATH_KEY, m_serverPath->path());
     settings.setValue(ROUNDS_KEY, m_rounds->value());
-    settings.setValue(MAPPATH_KEY, m_mapPath->path());
 }
 
 void MainWindow::launchServer()
@@ -210,11 +208,6 @@ void MainWindow::launchServer()
     arguments << "server"
               << QString::number(m_botModel->enabledPlayers())
               << QString::number(m_rounds->value());
-
-    QFileInfo mapFile(m_mapPath->path());
-    if (mapFile.exists()) {
-        arguments.append(mapFile.filePath());
-    }
 
     m_serverProcess.setWorkingDirectory(serverExecutable.path());
     m_serverProcess.start(serverExecutable.filePath(), arguments);
