@@ -31,7 +31,7 @@
 #define TICKINTERVAL_KEY  "tickinterval"
 #define FULLSCREEN_KEY    "fullscreen"
 #define HEADLESS_KEY      "headless"
-#define ROUNDSPLAYED_KEY  "headless"
+#define ROUNDSPLAYED_KEY  "roundsplayed"
 
 static MainWindow *instance = 0;
 
@@ -122,13 +122,16 @@ MainWindow::MainWindow(QWidget *parent)
     ///
     QWidget *addRemoveGroup = new QWidget;
     addRemoveGroup->setLayout(new QHBoxLayout);
-    QPushButton *addButton = new QPushButton(tr("Add"));
+    addRemoveGroup->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
+    leftLayout->addWidget(addRemoveGroup);
+    // Add button
+    QPushButton *addButton = new QPushButton(tr("Add new bot..."));
     connect(addButton, SIGNAL(clicked()), SLOT(addBot()));
     addRemoveGroup->layout()->addWidget(addButton);
-    QPushButton *removeButton = new QPushButton(tr("Remove"));
+    // Remove button
+    QPushButton *removeButton = new QPushButton(tr("Remove selected"));
     connect(removeButton, SIGNAL(clicked()), SLOT(removeBot()));
     addRemoveGroup->layout()->addWidget(removeButton);
-    leftLayout->addWidget(addRemoveGroup);
 
     ///////////
     /// Server control
@@ -194,16 +197,6 @@ MainWindow::MainWindow(QWidget *parent)
     // Some spacing to align things to the left
     serverSettings->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
 
-    // Some spacing to quit and kill buttons
-    leftLayout->addItem(new QSpacerItem(0, 50));
-
-    ///////////
-    /// Quit button
-    ///
-    QPushButton *quitButton = new QPushButton(tr("&Quit"));
-    connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
-    leftLayout->addWidget(quitButton);
-
     ///////////
     /// Right part of window
     ///
@@ -220,6 +213,13 @@ MainWindow::MainWindow(QWidget *parent)
     // Reset button
     QPushButton *resetButton = new QPushButton(tr("Reset"));
     rightWidget->layout()->addWidget(resetButton);
+
+    ///////////
+    /// Quit button
+    ///
+    QPushButton *quitButton = new QPushButton(tr("&Quit"));
+    connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
+    rightWidget->layout()->addWidget(quitButton);
 
     // Connections
     connect(killButton, SIGNAL(clicked()), SLOT(kill()));

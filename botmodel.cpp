@@ -221,7 +221,11 @@ void BotModel::handleProcessError(QProcess::ProcessError error)
 {
     QProcess *process = qobject_cast<QProcess*>(sender());
     if (process) {
-        qWarning() << "Error from bot: " << process->program();
+        if (process->arguments().count()> 1) {
+            qWarning() << "Error from bot: " << process->arguments()[0];
+        } else {
+            qWarning() << "Error from bot: " << process->program();
+        }
     }
     switch(error){
     case QProcess::FailedToStart:
