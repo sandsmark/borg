@@ -115,6 +115,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_botsView->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_botsView->resizeColumnsToContents();
     m_botsView->horizontalHeader()->setStretchLastSection(true);
+    m_botsView->selectRow(0);
     leftLayout->addWidget(m_botsView);
 
     ///////////
