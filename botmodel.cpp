@@ -53,6 +53,10 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
         return bot.arguments;
     case Wins:
         return bot.wins;
+    case RoundWins:
+        return bot.roundWins;
+    case TotalScore:
+        return bot.totalScore;
     case RoundsPlayed:
         return bot.roundsPlayed;
     case Running:
@@ -94,8 +98,12 @@ QVariant BotModel::headerData(int section, Qt::Orientation orientation, int role
         return tr("Arguments");
     case Wins:
         return tr("Wins");
+    case RoundWins:
+        return tr("Games won");
+    case TotalScore:
+        return tr("Total points");
     case RoundsPlayed:
-        return tr("Rounds Played");
+        return tr("Games Played");
     case Running:
         return tr("Running");
     default:
@@ -150,9 +158,7 @@ Qt::ItemFlags BotModel::flags(const QModelIndex &index) const
     Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
     if (index.column() == Enabled) {
         flags |= Qt::ItemIsUserCheckable;
-    }
-
-    if (index.column() != Running) {
+    } else if (index.column() != Running) {
         flags |= Qt::ItemIsEditable;
     }
 
@@ -256,6 +262,8 @@ void BotModel::addBot(QString path)
     bot.path = path;
     bot.name = file.dir().dirName();
     bot.wins = 0;
+    bot.roundWins = 0;
+    bot.totalScore = 0;
     bot.roundsPlayed = 0;
     if (file.suffix() == "py") {
         bot.runtime = "python";
@@ -301,24 +309,24 @@ QHash<QString, QString> BotModel::runtimes()
     return ret;
 }
 
-void BotModel::roundOver(QString name)
+void BotModel::roundOver(QString name, bool isWinner, int roundWins, int score)
 {
-    for(int i=0; i<m_bots.length(); i++) {
-        if (m_bots[i].enabled) {
-            m_bots[i].roundsPlayed++;
-        }
-    }
-
     for(int i=0; i<m_bots.length(); i++) {
         if (!m_bots[i].enabled) continue;
         if (m_bots[i].name != name) continue;
 
-        m_bots[i].wins++;
+        if (isWinner) {
+            m_bots[i].wins++;
+        }
+        m_bots[i].totalScore += score;
+        m_bots[i].roundWins += roundWins;
+        m_bots[i].roundsPlayed++;
+
         save();
         return;
     }
 
-    QMessageBox::warning(0, tr("Unable to find winner!"), tr("Unable to find '%1' in the list of bots, please adjust score manually").arg(name));
+    QMessageBox::warning(0, tr("Unable to find winner!"), tr("Unable to find '%1' in the list of bots, please adjust score manually (winner?: %2, round wins: %3, score: %4").arg(name).arg(isWinner).arg(roundWins).arg(score));
 }
 
 int BotModel::enabledPlayers()
@@ -336,14 +344,14 @@ int BotModel::enabledPlayers()
 
 QDataStream &operator<<(QDataStream &out, const Bot &bot)
 {
-    out << bot.enabled << bot.name << bot.path << bot.arguments << bot.runtime << bot.wins << bot.roundsPlayed;
+    out << bot.enabled << bot.name << bot.path << bot.arguments << bot.runtime << bot.wins << bot.roundWins << bot.totalScore << bot.roundsPlayed;
     return out;
 }
 
 
 QDataStream &operator>>(QDataStream &in, Bot &bot)
 {
-    in >> bot.enabled >> bot.name >> bot.path >> bot.arguments >> bot.runtime >> bot.wins >> bot.roundsPlayed;
+    in >> bot.enabled >> bot.name >> bot.path >> bot.arguments >> bot.runtime >> bot.wins >> bot.roundWins >> bot.totalScore >> bot.roundsPlayed;
     return in;
 }
 

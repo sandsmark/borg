@@ -16,6 +16,8 @@ struct Bot {
     QString path;
     QString arguments;
     int wins;
+    int roundWins;
+    int totalScore;
     int roundsPlayed;
     QSharedPointer<QProcess> process;
     QSharedPointer<QFile> logfile;
@@ -38,6 +40,8 @@ public:
         Path,
         Arguments,
         Wins,
+        RoundWins,
+        TotalScore,
         RoundsPlayed,
         Running
     };
@@ -46,7 +50,7 @@ public:
     ~BotModel();
 
     int rowCount(const QModelIndex &) const { return m_bots.length(); }
-    int columnCount(const QModelIndex &) const { return 8; }
+    int columnCount(const QModelIndex &) const { return 10; }
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
@@ -58,7 +62,7 @@ public:
 
     static QHash<QString, QString> runtimes();
 
-    void roundOver(QString name);
+    void roundOver(QString name, bool isWinner, int roundWins, int score);
 
     int enabledPlayers();
 

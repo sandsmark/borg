@@ -112,10 +112,11 @@ MainWindow::MainWindow(QWidget *parent)
     ///
     m_botsView->setItemDelegate(new BotViewDelegate);
     m_botsView->setModel(m_botModel);
-    m_botsView->resizeColumnsToContents();
     m_botsView->setShowGrid(false);
     m_botsView->setSelectionMode(QAbstractItemView::SingleSelection);
     m_botsView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_botsView->resizeColumnsToContents();
+    m_botsView->horizontalHeader()->setStretchLastSection(true);
     leftLayout->addWidget(m_botsView);
 
     ///////////
@@ -242,10 +243,10 @@ void MainWindow::saveSettings()
 
 void MainWindow::launchServer()
 {
-//    if (m_botModel->enabledPlayers() > 4 || m_botModel->enabledPlayers() < 1) {
-//        QMessageBox::warning(this, tr("Invalid number of players"), tr("Either too few or too many players enabled"));
-//        return;
-//    }
+    if (m_botModel->enabledPlayers() > 4 || m_botModel->enabledPlayers() < 1) {
+        QMessageBox::warning(this, tr("Invalid number of players"), tr("Either too few or too many players enabled"));
+        return;
+    }
 
     if (m_logFile.isOpen()) {
         m_logFile.close();
@@ -353,16 +354,29 @@ void MainWindow::serverFinished(int status)
         qWarning() << "unable to open results log!";
         return;
     }
-    QByteArray winner = resultsLog.readLine().trimmed();
-    if (winner.isEmpty()) {
-        qWarning() << "NO WINNER FOUND, race aborted?";
-    } else {
-        qWarning() << "Winner:" << winner;
-        m_botModel->roundOver(QString::fromUtf8(winner));
+
+    int playersRead = 0;
+    while (!resultsLog.atEnd()) {
+        QList<QByteArray> player = resultsLog.readLine().split(' ');
+        if (player.length() != 4) {
+            QMessageBox::warning(this, tr("Invalid scores.txt"), tr("The scores.txt file is corrupt (invalid column), please adjust scores manually."));
+            return;
+        }
+
+        bool roundWinsValid = false;
+        bool scoreValid = false;
+        m_botModel->roundOver(QString::fromUtf8(player[0]), (playersRead == 0), player[1].toInt(&roundWinsValid), player[2].toInt(&scoreValid));
+
+        if (!roundWinsValid || !scoreValid) {
+            QMessageBox::warning(this, tr("Invalid scores.txt"), tr("The scores.txt file is corrupt (invalid numbers), please adjust scores manually."));
+            return;
+        }
+        playersRead++;
     }
 
-    resultsLog.close();
-    resultsLog.remove();
+    if (playersRead != m_botModel->enabledPlayers()) {
+        QMessageBox::warning(this, tr("Missing players"), tr("Missing players from the scores.txt, please adjust manually"));
+    }
 
     updateName();
 }
