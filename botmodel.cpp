@@ -337,8 +337,9 @@ void BotModel::roundOver(QString name, bool isWinner, int roundWins, int score)
         save();
         return;
     }
-
-    QMessageBox::warning(0, tr("Unable to find winner!"), tr("Unable to find '%1' in the list of bots, please adjust score manually (winner?: %2, round wins: %3, score: %4").arg(name).arg(isWinner).arg(roundWins).arg(score));
+    const QString warningMessage(tr("Unable to find '%1' in the list of bots, please adjust score manually (winner?: %2, round wins: %3, score: %4").arg(name).arg(isWinner).arg(roundWins).arg(score));
+    qWarning() << warningMessage;
+    QMessageBox::warning(0, tr("Unable to find winner!"), warningMessage);
 }
 
 int BotModel::enabledPlayers()

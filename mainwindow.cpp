@@ -167,7 +167,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Round count editor
     m_rounds = new QSpinBox;
     m_rounds->setMinimum(1);
-    m_rounds->setMaximum(10);
+    m_rounds->setMaximum(10000);
     m_rounds->setSuffix(tr(" rounds"));
     serverSettings->layout()->addWidget(m_rounds);
     m_rounds->setValue(settings.value(ROUNDS_KEY, 4).toInt());
@@ -262,7 +262,7 @@ void MainWindow::saveSettings()
 
 void MainWindow::launchServer()
 {
-    if (m_botModel->enabledPlayers() > 4 || m_botModel->enabledPlayers() < 1) {
+    if (m_botModel->enabledPlayers() > 10 || m_botModel->enabledPlayers() < 1) {
         QMessageBox::warning(this, tr("Invalid number of players"), tr("Either too few or too many players enabled"));
         return;
     }
@@ -308,6 +308,7 @@ void MainWindow::launchServer()
     }
 
     m_serverProcess.setWorkingDirectory(serverExecutable.path());
+    QFile::remove(m_serverProcess.workingDirectory() + "/scores.txt");
     m_serverProcess.start(serverExecutable.filePath(), arguments);
 
     QTimer::singleShot(1000, m_botModel, SLOT(launchBots()));

@@ -36,7 +36,7 @@ void PathEditor::setPath(const QString &path)
     QFileInfo file(path);
     m_dialog->setDirectory(file.path());
     if (!file.suffix().isEmpty()) {
-        m_dialog->setNameFilter("*." + file.suffix());
+//        m_dialog->setNameFilter("*.*");
     }
     m_label->setText(path);
 }
