@@ -49,6 +49,7 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
             fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
             abort();
         case QtDebugMsg:
+        case QtInfoMsg:
         default:
             instance->normalOutput(msg);
             break;
@@ -65,6 +66,7 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
         fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
         abort();
     case QtDebugMsg:
+    case QtInfoMsg:
     default:
         fprintf(stderr, "Debug: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
         break;
@@ -153,7 +155,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_launchButton = new QPushButton(tr("&Start server"));
     serverLaunch->layout()->addWidget(m_launchButton);
     // Server path editor
-    m_serverPath = new PathEditor,
+    m_serverPath = new PathEditor;
     serverLaunch->layout()->addWidget(m_serverPath);
     m_serverPath->setPath(settings.value(SERVERPATH_KEY, "").toString());
     // Kill button
@@ -227,19 +229,20 @@ MainWindow::MainWindow(QWidget *parent)
     // Connections
     connect(killButton, SIGNAL(clicked()), SLOT(kill()));
 
-    connect(m_serverPath, SIGNAL(pathChanged(QString)), SLOT(saveSettings()));
-    connect(m_rounds, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
-    connect(m_autoLaunch, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
-    connect(m_autoQuit, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
-    connect(m_tickInterval, SIGNAL(valueChanged(int)), SLOT(saveSettings()));
-    connect(m_fullscreen, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
-    connect(m_headless, SIGNAL(stateChanged(int)), SLOT(saveSettings()));
+    connect(m_serverPath, &PathEditor::pathChanged, this, &MainWindow::saveSettings);
+    connect(m_rounds, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &MainWindow::saveSettings);
 
-    connect(m_launchButton, SIGNAL(clicked()), SLOT(launchServer()));
-    connect(resetButton, SIGNAL(clicked()), SLOT(resetBots()));
-    connect(&m_serverProcess, SIGNAL(readyReadStandardError()), SLOT(readServerErr()));
-    connect(&m_serverProcess, SIGNAL(readyReadStandardOutput()), SLOT(readServerOut()));
-    connect(&m_serverProcess, SIGNAL(finished(int)), SLOT(serverFinished(int)));
+    connect(m_autoLaunch, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
+    connect(m_autoQuit, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
+    connect(m_tickInterval, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &MainWindow::saveSettings);
+    connect(m_fullscreen, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
+    connect(m_headless, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
+
+    connect(m_launchButton, &QAbstractButton::clicked, this, &MainWindow::launchServer);
+    connect(resetButton, &QAbstractButton::clicked, this, &MainWindow::resetBots);
+    connect(&m_serverProcess, &QProcess::readyReadStandardError, this, &MainWindow::readServerErr);
+    connect(&m_serverProcess, &QProcess::readyReadStandardOutput, this, &MainWindow::readServerOut);
+    connect(&m_serverProcess, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, &MainWindow::serverFinished);
 
     setMinimumSize(1920, 1200);
 }

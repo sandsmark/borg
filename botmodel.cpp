@@ -27,7 +27,7 @@ BotModel::~BotModel()
 QVariant BotModel::data(const QModelIndex &index, int role) const
 {
     int row = index.row();
-    Column column = (Column)index.column();
+    Column column = Column(index.column());
 
     if (row > m_bots.length()) {
         qWarning() << "asked for illegal row" << row;
@@ -147,11 +147,13 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
         break;
     case Arguments:
         bot->arguments = value.toString();
+        break;
     case Wins:
         bot->wins = value.toInt();
         break;
     case RoundsPlayed:
         bot->roundsPlayed = value.toInt();
+        break;
     case TotalScore:
         bot->totalScore = value.toInt();
         break;
@@ -278,6 +280,7 @@ void BotModel::handleProcessError(QProcess::ProcessError error)
         break;
     case QProcess::ReadError:
         qWarning() << "Read error when communicating with bot";
+        break;
     case QProcess::UnknownError:
     default:
         qWarning() << "Unknown bot process error";
