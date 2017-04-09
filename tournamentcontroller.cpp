@@ -364,3 +364,8 @@ void Competitor::load(QSettings *settings)
     m_done = settings->value("done", false).toBool();
     settings->endGroup();
 }
+
+bool Competitor::isValid() const
+{
+    return BotModel::instance()->botIsValid(m_name);
+}

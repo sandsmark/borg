@@ -458,6 +458,17 @@ int BotModel::botWins(const QString &name) const
     return -1;
 }
 
+bool BotModel::botIsValid(const QString botName)
+{
+    for (const Bot &bot : m_bots) {
+        if (bot.name == botName) {
+            // maybe check moar?
+            return true;
+        }
+    }
+    return false;
+}
+
 
 
 QDataStream &operator<<(QDataStream &out, const Bot &bot)

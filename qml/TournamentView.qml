@@ -95,7 +95,7 @@ Rectangle {
             height: parent.height / 2 - parent.spacing / 2
             width: parent.width
             radius: 10
-            color: winner ? "orange" : "gray"
+            color: isValid ? (winner ? "orange" : "gray") : "red"
 
             Text {
                 id: nameText

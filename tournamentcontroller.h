@@ -14,6 +14,7 @@ class Competitor : public QObject
     Q_PROPERTY(QString name MEMBER m_name CONSTANT)
     Q_PROPERTY(bool winner MEMBER m_winner NOTIFY winnerChanged)
     Q_PROPERTY(int score READ score NOTIFY scoreChanged)
+    Q_PROPERTY(bool isValid READ isValid CONSTANT)
 
 public:
     Competitor(QString name, QObject *parent);
@@ -26,6 +27,8 @@ public:
 
     void store(QSettings *settings) const;
     void load(QSettings *settings);
+
+    bool isValid() const;
 
 signals:
     void scoreChanged();
