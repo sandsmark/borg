@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>names.txt</file>
+        <file alias="TournamentView.qml">qml/TournamentView.qml</file>
     </qresource>
 </RCC>

@@ -23,6 +23,9 @@
 #include <QLabel>
 #include <QThread>
 #include <QTime>
+#include <QTabWidget>
+#include <QQuickWidget>
+#include <QQuickItem>
 
 #define SERVERPATH_KEY    "serverpath"
 #define ROUNDS_KEY        "rounds"
@@ -107,6 +110,13 @@ MainWindow::MainWindow(QWidget *parent)
     updateName();
     leftLayout->addWidget(&m_name);
 
+    QTabWidget *tabWidget = new QTabWidget;
+    leftLayout->addWidget(tabWidget);
+
+    QWidget *botsetupWidget = new QWidget;
+    QLayout *botsetupLayout = new QVBoxLayout;
+    botsetupWidget->setLayout(botsetupLayout);
+
     ///////////
     /// Bot list view
     ///
@@ -119,8 +129,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_botsView->horizontalHeader()->setStretchLastSection(true);
     m_botsView->selectRow(0);
     m_botsView->setAlternatingRowColors(true);
-
-    leftLayout->addWidget(m_botsView);
+    botsetupLayout->addWidget(m_botsView);
 
     ///////////
     /// Add/remove buttons
@@ -128,7 +137,7 @@ MainWindow::MainWindow(QWidget *parent)
     QWidget *addRemoveGroup = new QWidget;
     addRemoveGroup->setLayout(new QHBoxLayout);
     addRemoveGroup->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
-    leftLayout->addWidget(addRemoveGroup);
+    botsetupLayout->addWidget(addRemoveGroup);
     // Add button
     QPushButton *addButton = new QPushButton(tr("&Add new bot..."));
     connect(addButton, SIGNAL(clicked()), SLOT(addBot()));
@@ -137,6 +146,16 @@ MainWindow::MainWindow(QWidget *parent)
     QPushButton *removeButton = new QPushButton(tr("Remove selected"));
     connect(removeButton, SIGNAL(clicked()), SLOT(removeBot()));
     addRemoveGroup->layout()->addWidget(removeButton);
+
+    tabWidget->addTab(botsetupWidget, "Bot setup");
+
+    ///////////
+    /// Tournament overview
+    ///
+    QQuickWidget *tournamentView = new QQuickWidget(QUrl("qrc:/TournamentView.qml"));
+    tournamentView->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    tournamentView->rootObject()->setProperty("color", tournamentView->palette().color(tournamentView->backgroundRole()));
+    tabWidget->addTab(tournamentView, "Tournament view");
 
     ///////////
     /// Server control
