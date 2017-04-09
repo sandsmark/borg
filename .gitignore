@@ -4,3 +4,4 @@ build*/
 borg
 logfile.txt
 Makefile
+localconfig.pri

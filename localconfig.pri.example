@@ -1,0 +1,8 @@
+# Add whatever special local config stuff you want here, then rename file to localconfig.pri
+
+#QMAKE_CXXFLAGS += -Weverything \
+#                -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unused-macros -Wno-newline-eof \
+#                -Wno-exit-time-destructors -Wno-global-constructors \
+#                -Wno-gnu-zero-variadic-macro-arguments -Wno-documentation -Wno-shadow \
+#                -Wno-missing-prototypes -Wno-unknown-pragmas -Wno-sign-conversion \
+#                -Wno-covered-switch-default -Wno-padded -Wno-unreachable-code-break
