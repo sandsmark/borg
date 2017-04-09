@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <algorithm>
+#include <QThread>
 
 #define BOTS_KEY "bots"
 
@@ -151,6 +152,12 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
         break;
     case RoundsPlayed:
         bot->roundsPlayed = value.toInt();
+    case TotalScore:
+        bot->totalScore = value.toInt();
+        break;
+    case RoundWins:
+        bot->roundWins = value.toInt();
+        break;
     case Running:
         return false;
     default:
@@ -188,22 +195,37 @@ void BotModel::launchBots()
         if (!m_bots[i].enabled) continue;
         QFileInfo file(m_bots[i].path);
         m_bots[i].process->setWorkingDirectory(file.path());
+        QStringList arguments;
+
+        arguments << "--nice=19" << "--quiet" << "-c" << "--seccomp" << "--overlay-tmpfs" << ("--private=" + file.path());
+
         if (m_bots[i].runtime.isEmpty()) {
-            m_bots[i].process->start(m_bots[i].path);
+//            arguments << m_bots[i].path;
+            arguments << "./" + file.fileName();
+//            m_bots[i].process->start(m_bots[i].path);
         } else {
             if (!runtimes().contains(m_bots[i].runtime)) {
                 qWarning() << "Unable to find runtime" << m_bots[i].runtime;
                 continue;
             }
-            QStringList arguments;
+
+            arguments << runtimes()[m_bots[i].runtime];
+
             if (m_bots[i].runtime == "java") {
                 arguments << "-jar";
             }
-            arguments << m_bots[i].path;
-            arguments << m_bots[i].arguments.split(' ');
-            qDebug() << "launching" << runtimes()[m_bots[i].runtime] << arguments;
-            m_bots[i].process->start(runtimes()[m_bots[i].runtime], arguments);
+
+            arguments << file.fileName();
+//            arguments << m_bots[i].path;
+
+            if (!m_bots[i].arguments.isEmpty()) {
+                arguments << m_bots[i].arguments.split(' ');
+            }
+
+            qDebug() << "launching" << arguments;
+//            m_bots[i].process->start(runtimes()[m_bots[i].runtime], arguments);
         }
+        m_bots[i].process->start("/usr/bin/firejail", arguments);
     }
     endResetModel();
 }
@@ -212,7 +234,11 @@ void BotModel::killBots()
 {
     beginResetModel();
     for (int i=0; i<m_bots.length(); i++) {
-        m_bots[i].process->kill();
+        if (m_bots[i].process->state() == QProcess::Running) {
+            m_bots[i].process->terminate();
+//            QThread::msleep(500);
+//            m_bots[i].process->kill();
+        }
     }
     endResetModel();
 }
@@ -221,11 +247,21 @@ void BotModel::handleProcessError(QProcess::ProcessError error)
 {
     QProcess *process = qobject_cast<QProcess*>(sender());
     if (process) {
-        if (process->arguments().count()> 1) {
-            qWarning() << "Error from bot: " << process->arguments()[0];
+        const QStringList arguments = process->arguments();
+        if (arguments.count() > 7) {
+            if (arguments[6] == "-jar" && arguments.count() > 8) {
+                qWarning() << arguments[8];
+            } else {
+                qWarning() << arguments[7];
+            }
         } else {
-            qWarning() << "Error from bot: " << process->program();
+            qWarning() << arguments;
         }
+//        if (process->arguments().count()> 1) {
+//            qWarning() << "Error from bot: " << process->arguments()[0];
+//        } else {
+//            qWarning() << "Error from bot: " << process->program();
+//        }
     }
     switch(error){
     case QProcess::FailedToStart:
@@ -364,6 +400,17 @@ bool compareBots(Bot *a, const Bot *b)
     }
 }
 
+//bool compareBots2(Bot *a, const Bot *b)
+//{
+////    if (a->wins != b->wins) {
+////        return a->wins > b->wins;
+////    } else if (a->roundWins != b->roundWins) {
+////        return a->roundWins > b->roundWins;
+////    } else {
+//        return a->totalScore > b->totalScore;
+////    }
+//}
+
 QStringList BotModel::topPlayers()
 {
     QList<Bot*> bots;
@@ -371,6 +418,10 @@ QStringList BotModel::topPlayers()
     for (int i=0; i<m_bots.count(); i++) {
         bots.append(&m_bots[i]);
     }
+//    std::sort(bots.begin(), bots.end(), compareBots2);
+//    for (int i=0; i<bots.count(); i++) {
+//        qDebug() << bots[i]->name;
+//    }
     std::sort(bots.begin(), bots.end(), compareBots);
 
     QStringList names;
@@ -415,14 +466,19 @@ void BotModel::storeOutput()
 
         QByteArray err = m_bots[i].process->readAllStandardError();
         if (!err.isEmpty()) {
-        //    qWarning() << m_bots[i].process->program() << err;
+            const QStringList arguments = m_bots[i].process->arguments();
+            if (arguments.count() > 7) {
+                qDebug() << arguments[7] << err;
+        } else {
+                qDebug() << arguments << err;
+            }
         }
         m_bots[i].logfile->write(err);
-        QByteArray out = m_bots[i].process->readAllStandardOutput();
-        if (!out.isEmpty()) {
-        //    qDebug() << m_bots[i].process->program() << out;
-        }
-        m_bots[i].logfile->write(out);
+//        QByteArray out = m_bots[i].process->readAllStandardOutput();
+//        if (!out.isEmpty()) {
+//            qDebug() << m_bots[i].process->program() << out;
+//        }
+//        m_bots[i].logfile->write(out);
         return;
     }
     qWarning() << "Unable to find bot with process" << sender();

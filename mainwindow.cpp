@@ -116,6 +116,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_botsView->resizeColumnsToContents();
     m_botsView->horizontalHeader()->setStretchLastSection(true);
     m_botsView->selectRow(0);
+    m_botsView->setAlternatingRowColors(true);
+
     leftLayout->addWidget(m_botsView);
 
     ///////////
@@ -126,7 +128,7 @@ MainWindow::MainWindow(QWidget *parent)
     addRemoveGroup->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
     leftLayout->addWidget(addRemoveGroup);
     // Add button
-    QPushButton *addButton = new QPushButton(tr("Add new bot..."));
+    QPushButton *addButton = new QPushButton(tr("&Add new bot..."));
     connect(addButton, SIGNAL(clicked()), SLOT(addBot()));
     addRemoveGroup->layout()->addWidget(addButton);
     // Remove button
@@ -239,7 +241,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_serverProcess, SIGNAL(readyReadStandardOutput()), SLOT(readServerOut()));
     connect(&m_serverProcess, SIGNAL(finished(int)), SLOT(serverFinished(int)));
 
-    resize(1920, 1200);
+    setMinimumSize(1920, 1200);
 }
 
 MainWindow::~MainWindow()
@@ -328,7 +330,7 @@ void MainWindow::readServerOut()
 
 void MainWindow::addBot()
 {
-    QString path = QFileDialog::getOpenFileName(this, tr("Select bot"));
+    QString path = QFileDialog::getOpenFileName(this, tr("Select bot"), QStringLiteral("/home/sandsmark/tg/16/ai"));
     m_botModel->addBot(path);
 }
 
