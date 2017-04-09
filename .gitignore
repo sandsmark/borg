@@ -1,0 +1,6 @@
+moc_*.cpp
+borg.pro.user
+build*/
+borg
+logfile.txt
+Makefile
