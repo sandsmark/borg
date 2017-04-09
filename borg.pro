@@ -24,3 +24,6 @@ HEADERS  += mainwindow.h \
 
 DISTFILES += \
     localconfig.pri
+
+RESOURCES += \
+    resources.qrc

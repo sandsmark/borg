@@ -94,7 +94,7 @@ MainWindow::MainWindow(QWidget *parent)
     addWidget(leftWidget);
 
     // Round names
-    QFile nameFile("names.txt");
+    QFile nameFile(":/names.txt");
     if (nameFile.open(QIODevice::ReadOnly)) {
         m_names = nameFile.readAll().trimmed().split('\n');
         qsrand(QTime::currentTime().msec());
