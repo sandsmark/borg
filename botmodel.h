@@ -31,7 +31,6 @@ class BotModel : public QAbstractTableModel
 {
     Q_OBJECT
 
-
 public:
     enum Column {
         Enabled = 0,
@@ -46,15 +45,16 @@ public:
         Running
     };
 
-    BotModel(QObject *parent);
+    static BotModel *instance() { static BotModel me; return &me; }
+
     ~BotModel();
 
-    int rowCount(const QModelIndex &) const { return m_bots.length(); }
-    int columnCount(const QModelIndex &) const { return 10; }
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
-    Qt::ItemFlags flags(const QModelIndex &index) const;
+    int rowCount(const QModelIndex & = QModelIndex()) const override { return m_bots.length(); }
+    int columnCount(const QModelIndex &) const override { return 10; }
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
     void removeRow(int row);
     void addBot(QString path);
 
@@ -70,6 +70,9 @@ public:
 
     void resetBots();
 
+    int botWins(const QString &name) const;
+    QString botName(int row) const { if (row >= rowCount()) return QString::null; return m_bots[row].name; }
+
 public slots:
     void launchBots();
     void killBots();
@@ -80,6 +83,7 @@ private slots:
     void botStateChanged();
 
 private:
+    BotModel();
     void initializeBotProcess(Bot *bot);
 
     QList<Bot> m_bots;

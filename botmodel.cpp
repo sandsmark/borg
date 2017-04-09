@@ -9,8 +9,7 @@
 
 #define BOTS_KEY "bots"
 
-BotModel::BotModel(QObject *parent) :
-    QAbstractTableModel(parent)
+BotModel::BotModel()
 {
     QSettings settings;
     m_bots = settings.value(BOTS_KEY, QVariant::fromValue(QList<Bot>())).value<QList<Bot> >();
@@ -373,6 +372,7 @@ void BotModel::roundOver(QString name, bool isWinner, int roundWins, int score)
         m_bots[i].roundWins += roundWins;
         m_bots[i].roundsPlayed++;
 
+
         save();
         return;
     }
@@ -444,6 +444,18 @@ void BotModel::resetBots()
     }
     botStateChanged();
     save();
+}
+
+int BotModel::botWins(const QString &name) const
+{
+    for (const Bot &bot : m_bots) {
+        if (bot.name == name) {
+            return bot.wins;
+        }
+    }
+
+    qWarning() << "Failed to find bot" << name;
+    return -1;
 }
 
 

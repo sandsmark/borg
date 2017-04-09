@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "botviewdelegate.h"
 #include "spinbox.h"
+#include "tournamentcontroller.h"
 
 #include <QHeaderView>
 #include <QItemDelegate>
@@ -26,6 +27,8 @@
 #include <QTabWidget>
 #include <QQuickWidget>
 #include <QQuickItem>
+#include <QQmlContext>
+#include <QQmlEngine>
 
 #define SERVERPATH_KEY    "serverpath"
 #define ROUNDS_KEY        "rounds"
@@ -79,13 +82,13 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
 MainWindow::MainWindow(QWidget *parent)
     : QSplitter(parent),
       m_botsView(new QTableView(this)),
-      m_botModel(new BotModel(this)),
+      m_botModel(BotModel::instance()),
       m_logFile("BORG.log")
 {
     m_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
 
     instance = this;
-    qInstallMessageHandler(messageHandler);
+//    qInstallMessageHandler(messageHandler);
 
     QSettings settings;
     m_roundsPlayed = settings.value(ROUNDSPLAYED_KEY, 0).toInt();
@@ -156,6 +159,7 @@ MainWindow::MainWindow(QWidget *parent)
     tournamentView->setResizeMode(QQuickWidget::SizeRootObjectToView);
     tournamentView->rootObject()->setProperty("color", tournamentView->palette().color(tournamentView->backgroundRole()));
     tabWidget->addTab(tournamentView, "Tournament view");
+    tabWidget->setCurrentIndex(1);
 
     ///////////
     /// Server control
@@ -264,6 +268,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_serverProcess, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, &MainWindow::serverFinished);
 
     setMinimumSize(1920, 1200);
+
+    qDebug() << TournamentController::instance()->getNextCompetitors();
 }
 
 MainWindow::~MainWindow()
@@ -400,6 +406,8 @@ void MainWindow::serverFinished(int status)
     }
 
     int playersRead = 0;
+
+    QMap<QString, int> results;
     while (!resultsLog.atEnd()) {
         QList<QByteArray> player = resultsLog.readLine().split(' ');
         if (player.length() != 4) {
@@ -409,7 +417,9 @@ void MainWindow::serverFinished(int status)
 
         bool roundWinsValid = false;
         bool scoreValid = false;
-        m_botModel->roundOver(QString::fromUtf8(player[0]), (playersRead == 0), player[1].toInt(&roundWinsValid), player[2].toInt(&scoreValid));
+        QString name = QString::fromUtf8(player[0]);
+        int wins = player[1].toInt(&roundWinsValid);
+        m_botModel->roundOver(name, (playersRead == 0), wins, player[2].toInt(&scoreValid));
 
         if (!roundWinsValid || !scoreValid) {
             QMessageBox::warning(this, tr("Invalid scores.txt"), tr("The scores.txt file is corrupt (invalid numbers), please adjust scores manually."));
@@ -417,6 +427,7 @@ void MainWindow::serverFinished(int status)
         }
         playersRead++;
     }
+    TournamentController::instance()->matchCompleted(results);
 
     if (playersRead != m_botModel->enabledPlayers()) {
         QMessageBox::warning(this, tr("Missing players"), tr("Missing players from the scores.txt, please adjust manually"));
