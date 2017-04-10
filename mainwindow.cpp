@@ -37,6 +37,7 @@
 #define TICKINTERVAL_KEY  "tickinterval"
 #define FULLSCREEN_KEY    "fullscreen"
 #define HEADLESS_KEY      "headless"
+#define TICKLESS_KEY      "tickless"
 #define ROUNDSPLAYED_KEY  "roundsplayed"
 
 static MainWindow *instance = 0;
@@ -221,6 +222,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_headless = new QCheckBox(tr("Headless mode"));
     serverSettings->layout()->addWidget(m_headless);
     m_headless->setChecked(settings.value(HEADLESS_KEY, false).toBool());
+    // Tickless checkbox
+    m_tickless = new QCheckBox(tr("Tickless mode"));
+    serverSettings->layout()->addWidget(m_tickless);
+    m_tickless->setChecked(settings.value(TICKLESS_KEY, false).toBool());
 
     // Some spacing to align things to the left
     serverSettings->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
@@ -260,6 +265,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_tickInterval, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &MainWindow::saveSettings);
     connect(m_fullscreen, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
     connect(m_headless, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
+    connect(m_tickless, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
 
     connect(m_launchButton, &QAbstractButton::clicked, this, &MainWindow::launchServer);
     connect(resetButton, &QAbstractButton::clicked, this, &MainWindow::resetBots);
@@ -287,6 +293,7 @@ void MainWindow::saveSettings()
     settings.setValue(TICKINTERVAL_KEY, m_tickInterval->value());
     settings.setValue(FULLSCREEN_KEY, m_fullscreen->isChecked());
     settings.setValue(HEADLESS_KEY, m_headless->isChecked());
+    settings.setValue(TICKLESS_KEY, m_tickless->isChecked());
     settings.setValue(ROUNDSPLAYED_KEY, m_roundsPlayed);
 }
 
@@ -335,6 +342,9 @@ void MainWindow::launchServer()
     }
     if (m_headless->isChecked()) {
         arguments << "--headless";
+    }
+    if (m_tickless->isChecked()) {
+        arguments << "--tickless";
     }
 
     m_serverProcess.setWorkingDirectory(serverExecutable.path());

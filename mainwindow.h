@@ -53,6 +53,7 @@ private:
     QCheckBox *m_autoQuit;
     QCheckBox *m_fullscreen;
     QCheckBox *m_headless;
+    QCheckBox *m_tickless;
     QPushButton *m_launchButton;
     QProcess m_serverProcess;
     QTextEdit m_serverOutput;
