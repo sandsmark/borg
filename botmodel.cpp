@@ -355,6 +355,7 @@ QHash<QString, QString> BotModel::runtimes()
     ret["mono"] = "/usr/bin/mono";
     ret["java"] = "/usr/bin/java";
     ret["wine"] = "/usr/bin/wine";
+    ret[""] = "";
 
     return ret;
 }
