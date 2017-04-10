@@ -419,8 +419,8 @@ void MainWindow::serverFinished(int status)
 
     QMap<QString, int> results;
     while (!resultsLog.atEnd()) {
-        QList<QByteArray> player = resultsLog.readLine().split(' ');
-        if (player.length() != 4) {
+        QList<QByteArray> player = resultsLog.readLine().trimmed().split(' ');
+        if (player.length() != 3) {
             QMessageBox::warning(this, tr("Invalid scores.txt"), tr("The scores.txt file is corrupt (invalid column), please adjust scores manually."));
             return;
         }
@@ -429,12 +429,15 @@ void MainWindow::serverFinished(int status)
         bool scoreValid = false;
         QString name = QString::fromUtf8(player[0]);
         int wins = player[1].toInt(&roundWinsValid);
-        m_botModel->roundOver(name, (playersRead == 0), wins, player[2].toInt(&scoreValid));
+        int points = player[2].toInt(&scoreValid);
 
-        if (!roundWinsValid || !scoreValid) {
-            QMessageBox::warning(this, tr("Invalid scores.txt"), tr("The scores.txt file is corrupt (invalid numbers), please adjust scores manually."));
+        if (!roundWinsValid || !scoreValid || name.isEmpty()) {
+            qWarning() << roundWinsValid << scoreValid << player;
+            QMessageBox::warning(this, tr("Invalid scores.txt"), tr("The scores.txt file is corrupt (invalid values), please adjust scores manually."));
             return;
         }
+
+        m_botModel->roundOver(name, (playersRead == 0), wins, points);
         playersRead++;
     }
     TournamentController::instance()->matchCompleted(results);
