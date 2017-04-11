@@ -94,6 +94,7 @@ public:
     Match *match(int match) const { if (match >= m_matches.count()) { return nullptr; } return m_matches[match]; }
 
     Match *firstUnplayedMatch() const;
+    Match *firstOpenMatch() const;
 
     void store(QSettings *settings) const;
     void load(QSettings *settings);
@@ -127,10 +128,11 @@ public:
 
     void initializeMatches();
 
-    Round *currentWinnerRound() const;
-    Round *currentLosersRound() const;
-
+    Round *nextUnplayedRound() const;
     Round *nextWinnersRound();
+
+    Round *nextOpenLosersRound() const;
+    Round *nextOpenWinnersRound() const;
 
     QStringList getNextCompetitors() const;
 

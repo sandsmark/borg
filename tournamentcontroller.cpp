@@ -17,7 +17,7 @@ QQmlListProperty<Round> TournamentController::losersRounds()
 
 void TournamentController::onMatchCompleted(const QMap<QString, int> &results)
 {
-    Round *round = currentWinnerRound();
+    Round *round = nextUnplayedRound();
     if (!round) {
         qWarning() << "Failed to get current round";
         return;
@@ -32,8 +32,21 @@ void TournamentController::onMatchCompleted(const QMap<QString, int> &results)
     for (const QString &name : results.keys()) {
         currentMatch->setResult(name, results[name]);
     }
-//    Competitor *winner = currentMatch->winner();
-//    Competitor *loser = currentMatch->loser();
+    Competitor *winner = currentMatch->winner();
+    Competitor *loser = currentMatch->loser();
+
+    winner->setWinner(true);
+    loser->setWinner(false);
+
+    Round *nextWinnerRound = nextOpenWinnersRound();
+    if (nextWinnerRound) {
+        nextWinnerRound->firstOpenMatch()->addCompetitor(new Competitor(winner->name(), nextWinnerRound));
+    }
+
+    Round *nextLoserRound = nextOpenLosersRound();
+    if (nextLoserRound) {
+        nextLoserRound->firstOpenMatch()->addCompetitor(new Competitor(loser->name(), nextLoserRound));
+    }
 
     store();
 }
@@ -55,6 +68,8 @@ void TournamentController::initializeMatches()
         round->deleteLater();
     }
     m_loserBracket.clear();
+    QSettings settings;
+    settings.remove("Tournament");
 
     int roundNumber = 1;
     int matchNumber = 1;
@@ -173,46 +188,53 @@ void TournamentController::initializeMatches()
     store();
 }
 
-Round *TournamentController::currentWinnerRound() const
+Round *TournamentController::nextUnplayedRound() const
+{
+    for (Round *round : m_loserBracket) {
+        if (!round->firstOpenMatch() && round->firstUnplayedMatch()) {
+            return round;
+        }
+    }
+
+    for (Round *round : m_winnerBracket) {
+        if (!round->firstOpenMatch() && round->firstUnplayedMatch()) {
+            return round;
+        }
+    }
+
+    return nullptr;
+}
+
+Round *TournamentController::nextOpenLosersRound() const
+{
+    for (Round *round : m_loserBracket) {
+        if (round->firstOpenMatch()) {
+            return round;
+        }
+    }
+
+    return nullptr;
+}
+
+Round *TournamentController::nextOpenWinnersRound() const
 {
     for (Round *round : m_winnerBracket) {
-        if (round->firstUnplayedMatch()) {
+        if (round->firstOpenMatch()) {
             return round;
         }
     }
 
     return nullptr;
-}
-
-Round *TournamentController::currentLosersRound() const
-{
-
-    for (Round *round : m_loserBracket) {
-        if (round->firstUnplayedMatch()) {
-            return round;
-        }
-    }
-
-    return nullptr;
-}
-
-Round *TournamentController::nextWinnersRound()
-{
-    if (currentWinnerRound() == m_winnerBracket.last()) {
-        Round *round = new Round("Round " + QString::number(m_winnerBracket.count() + 1), this);
-        m_winnerBracket.append(round);
-    }
-
-    return m_winnerBracket.last();
 }
 
 QStringList TournamentController::getNextCompetitors() const
 {
-    const Round *nextRound = currentWinnerRound();
+    Round *nextRound = nextUnplayedRound();
     if (!nextRound) {
         qWarning() << "No rounds left";
         return QStringList();
     }
+
     const Match *nextMatch = nextRound->firstUnplayedMatch();
     if (!nextMatch) {
         qWarning() << "No matches left";
@@ -342,6 +364,17 @@ Match *Round::firstUnplayedMatch() const
     return nullptr;
 }
 
+Match *Round::firstOpenMatch() const
+{
+    for (Match *match : m_matches) {
+        if (!match->isReady()) {
+            return match;
+        }
+    }
+
+    return nullptr;
+}
+
 void Round::store(QSettings *settings) const
 {
     settings->beginGroup(m_name);
@@ -405,14 +438,14 @@ QQmlListProperty<Competitor> Match::competitors()
 Competitor *Match::winner() const
 {
     return *std::max_element(m_competitors.begin(), m_competitors.end(), [](const Competitor *a, const Competitor *b) {
-        return a->score() > b->score();
+        return a->score() < b->score();
     });
 }
 
 Competitor *Match::loser() const
 {
     return *std::min_element(m_competitors.begin(), m_competitors.end(), [](const Competitor *a, const Competitor *b) {
-        return a->score() > b->score();
+        return a->score() < b->score();
     });
 }
 

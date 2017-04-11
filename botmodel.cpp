@@ -1,4 +1,6 @@
 #include "botmodel.h"
+#include "tournamentcontroller.h"
+
 #include <QDebug>
 #include <QFileInfo>
 #include <QDir>
@@ -192,8 +194,11 @@ void BotModel::removeRow(int row)
 void BotModel::launchBots()
 {
     beginResetModel(); // For running info
+    const QStringList botsToLaunch = TournamentController::instance()->getNextCompetitors();
     for (int i=0; i<m_bots.length(); i++) {
         if (!m_bots[i].enabled) continue;
+        if (!botsToLaunch.contains(m_bots[i].name)) continue;
+
         QFileInfo file(m_bots[i].path);
         m_bots[i].process->setWorkingDirectory(file.path());
         QStringList arguments;
@@ -384,13 +389,14 @@ void BotModel::roundOver(QString name, bool isWinner, int roundWins, int score)
 
 int BotModel::enabledPlayers()
 {
-    int ret = 0;
-    foreach(const Bot &bot, m_bots) {
-        if (bot.enabled) {
-            ret++;
-        }
-    }
-    return ret;
+    return TournamentController::instance()->getNextCompetitors().count();
+//    int ret = 0;
+//    foreach(const Bot &bot, m_bots) {
+//        if (bot.enabled) {
+//            ret++;
+//        }
+//    }
+//    return ret;
 }
 
 bool compareBots(Bot *a, const Bot *b)

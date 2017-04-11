@@ -274,8 +274,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_serverProcess, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, &MainWindow::serverFinished);
 
     setMinimumSize(1920, 1200);
-
-    qDebug() << TournamentController::instance()->getNextCompetitors();
 }
 
 MainWindow::~MainWindow()
@@ -444,7 +442,7 @@ void MainWindow::serverFinished(int status)
     TournamentController::instance()->onMatchCompleted(results);
 
     if (playersRead != m_botModel->enabledPlayers()) {
-        QMessageBox::warning(this, tr("Missing players"), tr("Missing players from the scores.txt, please adjust manually"));
+        QMessageBox::warning(this, tr("Missing players"), tr("Missing players (%1 read of %2) from the scores.txt, please adjust manually").arg(playersRead).arg(m_botModel->enabledPlayers()));
     }
 
     m_roundsPlayed++;
