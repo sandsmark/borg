@@ -129,7 +129,6 @@ public:
     void initializeMatches();
 
     Round *nextUnplayedRound() const;
-    Round *nextWinnersRound();
 
     Round *nextOpenLosersRound() const;
     Round *nextOpenWinnersRound() const;

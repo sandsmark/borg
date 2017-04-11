@@ -252,17 +252,21 @@ void TournamentController::load()
     QSettings settings;
     settings.beginGroup("Tournament");
     settings.beginGroup("Winner rounds");
-    for (const QString &roundName : settings.childGroups()) {
-        Round *round = new Round(roundName, this);
+    for (const QString &groupName : settings.childGroups()) {
+        settings.beginGroup(groupName);
+        Round *round = new Round(settings.value("name").toString(), this);
         round->load(&settings);
         m_winnerBracket.append(round);
+        settings.endGroup();
     }
     settings.endGroup();
     settings.beginGroup("Loser rounds");
-    for (const QString &roundName : settings.childGroups()) {
-        Round *round = new Round(roundName, this);
+    for (const QString &groupName : settings.childGroups()) {
+        settings.beginGroup(groupName);
+        Round *round = new Round(settings.value("name").toString(), this);
         round->load(&settings);
         m_loserBracket.append(round);
+        settings.endGroup();
     }
 }
 
@@ -271,13 +275,17 @@ void TournamentController::store() const
     QSettings settings;
     settings.beginGroup("Tournament");
     settings.beginGroup("Winner rounds");
-    for (Round *round : m_winnerBracket) {
-        round->store(&settings);
+    for (int i=0; i<m_winnerBracket.count(); i++) {
+        settings.beginGroup("round " + QString::number(i, 16));
+        m_winnerBracket[i]->store(&settings);
+        settings.endGroup();
     }
     settings.endGroup();
     settings.beginGroup("Loser rounds");
-    for (Round *round : m_loserBracket) {
-        round->store(&settings);
+    for (int i=0; i<m_loserBracket.count(); i++) {
+        settings.beginGroup("round " + QString::number(i, 16));
+        m_loserBracket[i]->store(&settings);
+        settings.endGroup();
     }
 }
 
@@ -380,23 +388,23 @@ Match *Round::firstOpenMatch() const
 
 void Round::store(QSettings *settings) const
 {
-    settings->beginGroup(m_name);
-    for (const Match *match : m_matches) {
-        match->store(settings);
+    settings->setValue("name", m_name);
+    for (int i=0; i<m_matches.count(); i++) {
+        settings->beginGroup("match" + QString::number(i, 16));
+        m_matches[i]->store(settings);
+        settings->endGroup();
     }
-    settings->endGroup();
 }
 
 void Round::load(QSettings *settings)
 {
-    settings->beginGroup(m_name);
-    for (const QString &matchName :  settings->childGroups()) {
-        Match *match = new Match(matchName, this);
+    for (const QString &groupName :  settings->childGroups()) {
+        settings->beginGroup(groupName);
+        Match *match = new Match(settings->value("id").toString(), this);
         match->load(settings);
         m_matches.append(match);
-
+        settings->endGroup();
     }
-    settings->endGroup();
 }
 
 int Round::countMatches(QQmlListProperty<Match> *list)
@@ -495,22 +503,24 @@ bool Match::setResult(const QString &name, int score)
 
 void Match::store(QSettings *settings) const
 {
-    settings->beginGroup(m_id);
-    for (const Competitor *competitor : m_competitors) {
-        competitor->store(settings);
+    settings->setValue("id", m_id);
+    for (int i=0; i<m_competitors.count(); i++) {
+        settings->beginGroup("competitor" + QString::number(i, 16));
+        m_competitors[i]->store(settings);
+        settings->endGroup();
     }
-    settings->endGroup();
 }
 
 void Match::load(QSettings *settings)
 {
-    settings->beginGroup(m_id);
-    for (const QString &competitorName : settings->childGroups()) {
-        Competitor *competitor = new Competitor(competitorName, this);
+    m_id = settings->value("id").toString();
+    for (const QString &groupName : settings->childGroups()) {
+        settings->beginGroup(groupName);
+        Competitor *competitor = new Competitor(settings->value("name").toString(), this);
         competitor->load(settings);
         m_competitors.append(competitor);
+        settings->endGroup();
     }
-    settings->endGroup();
 }
 
 int Match::countCompetitors(QQmlListProperty<Competitor> *list)
@@ -550,20 +560,17 @@ Competitor::Competitor(QString name, QObject *parent) : QObject(parent),
 
 void Competitor::store(QSettings *settings) const
 {
-    settings->beginGroup(m_name);
+    settings->setValue("name", m_name);
     settings->setValue("score", m_score);
     settings->setValue("winner", m_winner);
     settings->setValue("done", m_done);
-    settings->endGroup();
 }
 
 void Competitor::load(QSettings *settings)
 {
-    settings->beginGroup(m_name);
-    m_score = settings->value("score", 0).toInt();
-    m_winner = settings->value("winner", false).toBool();
-    m_done = settings->value("done", false).toBool();
-    settings->endGroup();
+    m_score = settings->value("score").toInt();
+    m_winner = settings->value("winner").toBool();
+    m_done = settings->value("done").toBool();
 }
 
 bool Competitor::isValid() const

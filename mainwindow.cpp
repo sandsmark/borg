@@ -158,9 +158,9 @@ MainWindow::MainWindow(QWidget *parent)
     ///
     QQuickWidget *tournamentView = new QQuickWidget(QUrl("qrc:/TournamentView.qml"));
     tournamentView->setResizeMode(QQuickWidget::SizeRootObjectToView);
-    tournamentView->rootObject()->setProperty("color", tournamentView->palette().color(tournamentView->backgroundRole()));
+//    tournamentView->rootObject()->setProperty("color", tournamentView->palette().color(tournamentView->backgroundRole()));
     tabWidget->addTab(tournamentView, "Tournament view");
-//    tabWidget->setCurrentIndex(1);
+    tabWidget->setCurrentIndex(1);
 
     ///////////
     /// Server control
