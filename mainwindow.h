@@ -37,8 +37,6 @@ private slots:
     void kill();
     void serverFinished(int status);
 
-    void updateName();
-
     void resetBots();
 
 private:
@@ -57,8 +55,6 @@ private:
     QPushButton *m_launchButton;
     QProcess m_serverProcess;
     QTextEdit m_serverOutput;
-    QList<QByteArray> m_names;
-    QLabel m_name;
     QFile m_logFile;
     QLabel m_topPlayers;
     int m_roundsPlayed;

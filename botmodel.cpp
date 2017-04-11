@@ -222,14 +222,12 @@ void BotModel::launchBots()
             }
 
             arguments << file.fileName();
-//            arguments << m_bots[i].path;
 
             if (!m_bots[i].arguments.isEmpty()) {
                 arguments << m_bots[i].arguments.split(' ');
             }
 
             qDebug() << "launching" << arguments;
-//            m_bots[i].process->start(runtimes()[m_bots[i].runtime], arguments);
         }
         m_bots[i].process->start("/usr/bin/firejail", arguments);
     }
@@ -410,17 +408,6 @@ bool compareBots(Bot *a, const Bot *b)
     }
 }
 
-//bool compareBots2(Bot *a, const Bot *b)
-//{
-////    if (a->wins != b->wins) {
-////        return a->wins > b->wins;
-////    } else if (a->roundWins != b->roundWins) {
-////        return a->roundWins > b->roundWins;
-////    } else {
-//        return a->totalScore > b->totalScore;
-////    }
-//}
-
 QStringList BotModel::topPlayers()
 {
     QList<Bot*> bots;
@@ -428,15 +415,12 @@ QStringList BotModel::topPlayers()
     for (int i=0; i<m_bots.count(); i++) {
         bots.append(&m_bots[i]);
     }
-//    std::sort(bots.begin(), bots.end(), compareBots2);
-//    for (int i=0; i<bots.count(); i++) {
-//        qDebug() << bots[i]->name;
-//    }
+
     std::sort(bots.begin(), bots.end(), compareBots);
 
     QStringList names;
     for (int i=0; i<qMin(bots.count(), 3); i++) {
-        names.append(bots[i]->name);
+        names.append(bots[i]->name + " (" + QString::number(bots[i]->wins) + ")");
     }
     return names;
 }

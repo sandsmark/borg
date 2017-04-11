@@ -8,6 +8,7 @@
 #include <QItemEditorFactory>
 #include <QComboBox>
 #include <QVBoxLayout>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QApplication>
@@ -89,37 +90,28 @@ MainWindow::MainWindow(QWidget *parent)
     m_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
 
     instance = this;
-//    qInstallMessageHandler(messageHandler);
+    qInstallMessageHandler(messageHandler);
 
     QSettings settings;
     m_roundsPlayed = settings.value(ROUNDSPLAYED_KEY, 0).toInt();
 
-    // Left part of window
-    QWidget *leftWidget = new QWidget;
-    QLayout *leftLayout = new QVBoxLayout;
-    leftWidget->setLayout(leftLayout);
-    addWidget(leftWidget);
-
-    // Round names
-    QFile nameFile(":/names.txt");
-    if (nameFile.open(QIODevice::ReadOnly)) {
-        m_names = nameFile.readAll().trimmed().split('\n');
-        qsrand(QTime::currentTime().msec());
-        QFont f( "Arial", 20, QFont::Bold);
-        m_name.setFont(f);
-    } else {
-        qDebug() << "Unable to open names file" << nameFile.errorString();
-    }
-    m_name.setText("...");
-    updateName();
-    leftLayout->addWidget(&m_name);
-
+    ///////////
+    /// Main/left part of window
+    ///
     QTabWidget *tabWidget = new QTabWidget;
-    leftLayout->addWidget(tabWidget);
+    addWidget(tabWidget);
+    tabWidget->setTabPosition(QTabWidget::East);
 
-    QWidget *botsetupWidget = new QWidget;
-    QLayout *botsetupLayout = new QVBoxLayout;
-    botsetupWidget->setLayout(botsetupLayout);
+    ///////////
+    /// Tournament overview
+    ///
+    QQuickWidget *tournamentView = new QQuickWidget(QUrl("qrc:/TournamentView.qml"));
+    tournamentView->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    tabWidget->addTab(tournamentView, "Tournament view");
+
+    QWidget *setupWidget = new QWidget;
+    QLayout *setupLayout = new QVBoxLayout;
+    setupWidget->setLayout(setupLayout);
 
     ///////////
     /// Bot list view
@@ -133,7 +125,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_botsView->horizontalHeader()->setStretchLastSection(true);
     m_botsView->selectRow(0);
     m_botsView->setAlternatingRowColors(true);
-    botsetupLayout->addWidget(m_botsView);
+    setupLayout->addWidget(m_botsView);
 
     ///////////
     /// Add/remove buttons
@@ -141,7 +133,7 @@ MainWindow::MainWindow(QWidget *parent)
     QWidget *addRemoveGroup = new QWidget;
     addRemoveGroup->setLayout(new QHBoxLayout);
     addRemoveGroup->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
-    botsetupLayout->addWidget(addRemoveGroup);
+    setupLayout->addWidget(addRemoveGroup);
     // Add button
     QPushButton *addButton = new QPushButton(tr("&Add new bot..."));
     connect(addButton, SIGNAL(clicked()), SLOT(addBot()));
@@ -151,46 +143,32 @@ MainWindow::MainWindow(QWidget *parent)
     connect(removeButton, SIGNAL(clicked()), SLOT(removeBot()));
     addRemoveGroup->layout()->addWidget(removeButton);
 
-    tabWidget->addTab(botsetupWidget, "Bot setup");
-
-    ///////////
-    /// Tournament overview
-    ///
-    QQuickWidget *tournamentView = new QQuickWidget(QUrl("qrc:/TournamentView.qml"));
-    tournamentView->setResizeMode(QQuickWidget::SizeRootObjectToView);
-//    tournamentView->rootObject()->setProperty("color", tournamentView->palette().color(tournamentView->backgroundRole()));
-    tabWidget->addTab(tournamentView, "Tournament view");
-    tabWidget->setCurrentIndex(1);
+    tabWidget->addTab(setupWidget, "Setup");
 
     ///////////
     /// Server control
     ///
-    QGroupBox *serverBox = new QGroupBox(tr("Server"));
+    QWidget *serverBox = new QWidget;
     serverBox->setLayout(new QVBoxLayout);
-    leftLayout->addWidget(serverBox);
+    setupLayout->addWidget(serverBox);
 
     ///////////
-    /// Server launch
+    /// Server settings
     ///
     QWidget *serverLaunch = new QWidget;
     serverLaunch->setLayout(new QHBoxLayout);
     serverBox->layout()->addWidget(serverLaunch);
-    // Launch button
-    m_launchButton = new QPushButton(tr("&Start server"));
-    serverLaunch->layout()->addWidget(m_launchButton);
     // Server path editor
     m_serverPath = new PathEditor;
     serverLaunch->layout()->addWidget(m_serverPath);
     m_serverPath->setPath(settings.value(SERVERPATH_KEY, "").toString());
-    // Kill button
-    QPushButton *killButton = new QPushButton(tr("&Kill server"));
-    serverLaunch->layout()->addWidget(killButton);
 
     ///////////
     /// Server settings
     ///
     QWidget *serverSettings = new QWidget;
-    serverSettings->setLayout(new QHBoxLayout);
+    QBoxLayout *serverSettingsLayout = new QHBoxLayout;
+    serverSettings->setLayout(serverSettingsLayout);
     serverBox->layout()->addWidget(serverSettings);
     // Round count editor
     m_rounds = new QSpinBox;
@@ -226,15 +204,17 @@ MainWindow::MainWindow(QWidget *parent)
     m_tickless = new QCheckBox(tr("Tickless mode"));
     serverSettings->layout()->addWidget(m_tickless);
     m_tickless->setChecked(settings.value(TICKLESS_KEY, false).toBool());
-
-    // Some spacing to align things to the left
-    serverSettings->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
+    serverSettingsLayout->addStretch();
+    // Reset button
+    QPushButton *resetButton = new QPushButton(tr("Reset tournament"));
+    serverSettingsLayout->addWidget(resetButton);
 
     ///////////
     /// Right part of window
     ///
     QWidget *rightWidget = new QWidget;
-    rightWidget->setLayout(new QVBoxLayout);
+    QVBoxLayout *rightLayout = new QVBoxLayout;
+    rightWidget->setLayout(rightLayout);
     addWidget(rightWidget);
     // Top players list
     m_topPlayers.setText("<h3>Top players</h3><ol><li>...</li></ol>");
@@ -242,10 +222,16 @@ MainWindow::MainWindow(QWidget *parent)
     updateTopPlayers();
     // Log/output view
     m_serverOutput.setReadOnly(true);
-    rightWidget->layout()->addWidget(&m_serverOutput);
-    // Reset button
-    QPushButton *resetButton = new QPushButton(tr("Reset"));
-    rightWidget->layout()->addWidget(resetButton);
+    rightLayout->addWidget(&m_serverOutput, 10);
+    // Server launch button
+    m_launchButton = new QPushButton(tr("&Start server"));
+    m_launchButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    rightLayout->addWidget(m_launchButton, 2);
+    // Kill button
+    QPushButton *killButton = new QPushButton(tr("&Kill server"));
+    rightWidget->layout()->addWidget(killButton);
+
+    rightLayout->addSpacing(10);
 
     ///////////
     /// Quit button
@@ -307,7 +293,7 @@ void MainWindow::launchServer()
     }
     m_logFile.setFileName(QDateTime::currentDateTime().toString(Qt::ISODate) + ".log");
     m_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
-    m_logFile.write("Starting " + m_name.text().toUtf8() + "\n");
+    m_logFile.write("Starting " + QByteArray::number(m_roundsPlayed) + "\n");
 
     if (m_serverProcess.state() == QProcess::Running) {
         QMessageBox::warning(this, tr("Server already running"), tr("The server executable is still running"));
@@ -400,7 +386,7 @@ void MainWindow::serverFinished(int status)
     m_logFile.setFileName("BORG.log");
     m_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
 
-    qWarning() << m_name.text() << "finished";
+    qWarning() << m_roundsPlayed << "finished";
 
     if (status != 0) {
         qWarning() << "Server finished with unclean status" << status;
@@ -448,16 +434,8 @@ void MainWindow::serverFinished(int status)
 
     m_roundsPlayed++;
     updateTopPlayers();
-    updateName();
+//    updateName();
     saveSettings();
-}
-
-void MainWindow::updateName()
-{
-    if (m_names.isEmpty()) {
-        return;
-    }
-    m_name.setText("Game: " + m_names[qrand() % m_names.size()] + " (" + QString::number(m_roundsPlayed) + ")");
 }
 
 void MainWindow::resetBots()
@@ -469,7 +447,6 @@ void MainWindow::resetBots()
     saveSettings();
     m_botModel->resetBots();
     TournamentController::instance()->initializeMatches();
-    updateName();
     updateTopPlayers();
 }
 

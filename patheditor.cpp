@@ -13,6 +13,7 @@ PathEditor::PathEditor(QWidget *parent) : QWidget(parent),
     m_label->setReadOnly(true);
 
     setLayout(new QHBoxLayout);
+    layout()->setMargin(0);
     layout()->addWidget(m_label);
     layout()->addWidget(m_button);
 

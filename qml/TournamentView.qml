@@ -1,4 +1,5 @@
 import QtQuick 2.0
+import QtQuick.Controls 2.1
 import com.iskrembilen 1.0
 
 Rectangle {
@@ -21,7 +22,7 @@ Rectangle {
             top: parent.top
             left: parent.left
             right: parent.right
-            margins: 10
+            margins: 5
         }
 
         color: lightBackground
@@ -49,17 +50,19 @@ Rectangle {
             left: parent.left
             right: parent.right
             bottom: parent.verticalCenter
-            margins: 10
+            margins: 5
         }
         clip: true
         boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar { }
+
 
         contentWidth: winnerRoundsRow.width
         contentHeight: winnerRoundsRow.height
 
         Row {
             id: winnerRoundsRow
-            spacing: 10
+            spacing: 30
             Repeater {
                 model: TournamentController.winnersRounds
                 delegate: roundComponent
@@ -73,7 +76,7 @@ Rectangle {
             top: parent.verticalCenter
             left: parent.left
             right: parent.right
-            margins: 10
+            margins: 5
         }
 
         color: lightBackground
@@ -101,7 +104,7 @@ Rectangle {
             left: parent.left
             right: parent.right
             bottom: parent.bottom
-            margins: 10
+            margins: 5
         }
         clip: true
         boundsBehavior: Flickable.StopAtBounds
@@ -111,7 +114,7 @@ Rectangle {
 
         Row {
             id: losersRoundsRow
-            spacing: 10
+            spacing: 30
             Repeater {
                 model: TournamentController.losersRounds
                 delegate: roundComponent
