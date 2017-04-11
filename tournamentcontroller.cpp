@@ -143,11 +143,11 @@ void TournamentController::initializeMatches()
 
     // Fill up the rest of the winner rounds
     while (m_winnerBracket.last()->matchCount() > 1) {
-        if (m_winnerBracket.last()->matchCount() == 2) {
-            winnerRound = new Round("Final", this);
-        } else {
+//        if (m_winnerBracket.last()->matchCount() == 2) {
+//            winnerRound = new Round("Final", this);
+//        } else {
             winnerRound = new Round("Round " + QString::number(roundNumber++), this);
-        }
+//        }
         for (int i=0; i < m_winnerBracket.last()->matchCount()/2; i++) {
             winnerRound->addMatch(new Match(QString::number(matchNumber++), winnerRound));
         }
@@ -180,7 +180,10 @@ void TournamentController::initializeMatches()
         m_loserBracket.append(loserRound);
     }
 
-    // Add tiebreaker
+    // Add final
+    Round *finalRound = new Round("Final", this);
+    finalRound->addMatch(new Match(QString::number(matchNumber++), finalRound));
+    m_winnerBracket.append(finalRound);
 
     emit winnerRoundsChanged();
     emit losersRoundsChanged();

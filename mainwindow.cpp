@@ -439,11 +439,12 @@ void MainWindow::serverFinished(int status)
         results[name] = wins;
         playersRead++;
     }
-    TournamentController::instance()->onMatchCompleted(results);
 
     if (playersRead != m_botModel->enabledPlayers()) {
         QMessageBox::warning(this, tr("Missing players"), tr("Missing players (%1 read of %2) from the scores.txt, please adjust manually").arg(playersRead).arg(m_botModel->enabledPlayers()));
     }
+
+    TournamentController::instance()->onMatchCompleted(results);
 
     m_roundsPlayed++;
     updateTopPlayers();
