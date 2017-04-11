@@ -447,6 +447,18 @@ void BotModel::resetBots()
     save();
 }
 
+QStringList BotModel::botNames() const
+{
+    QStringList ret;
+    for (const Bot &bot : m_bots) {
+        if (!bot.enabled) {
+            continue;
+        }
+        ret << bot.name;
+    }
+    return ret;
+}
+
 int BotModel::botWins(const QString &name) const
 {
     for (const Bot &bot : m_bots) {
@@ -495,9 +507,9 @@ void BotModel::storeOutput()
         if (!err.isEmpty()) {
             const QStringList arguments = m_bots[i].process->arguments();
             if (arguments.count() > 7) {
-                qDebug() << arguments[7] << err;
+//                qDebug() << arguments[7] << err;
         } else {
-                qDebug() << arguments << err;
+//                qDebug() << arguments << err;
             }
         }
         m_bots[i].logfile->write(err);

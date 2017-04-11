@@ -3,21 +3,27 @@
 
 #include <QDebug>
 #include <QSettings>
+#include <qmath.h>
 
 QQmlListProperty<Round> TournamentController::winnerRounds()
 {
-    return QQmlListProperty<Round>(this, nullptr, &TournamentController::countRounds, &TournamentController::round);
+    return QQmlListProperty<Round>(this, nullptr, &TournamentController::countWinnersRounds, &TournamentController::winnersRound);
 }
 
-void TournamentController::matchCompleted(const QMap<QString, int> &results)
+QQmlListProperty<Round> TournamentController::losersRounds()
 {
-    Round *round = currentRound();
+    return QQmlListProperty<Round>(this, nullptr, &TournamentController::countLosersRounds, &TournamentController::losersRound);
+}
+
+void TournamentController::onMatchCompleted(const QMap<QString, int> &results)
+{
+    Round *round = currentWinnerRound();
     if (!round) {
         qWarning() << "Failed to get current round";
         return;
     }
 
-    Match *currentMatch = round->currentMatch();
+    Match *currentMatch = round->firstUnplayedMatch();
     if (!currentMatch){
         qWarning() << "Failed to get current match!";
         return;
@@ -26,55 +32,151 @@ void TournamentController::matchCompleted(const QMap<QString, int> &results)
     for (const QString &name : results.keys()) {
         currentMatch->setResult(name, results[name]);
     }
+//    Competitor *winner = currentMatch->winner();
+//    Competitor *loser = currentMatch->loser();
 
     store();
+}
+
+static inline bool isPowerOfTwo(int number)
+{
+    return (number & (number - 1)) == 0;
 }
 
 void TournamentController::initializeMatches()
 {
-    const int playerCount = BotModel::instance()->rowCount();
-
-    bool oddNumber = (playerCount % 2);
-
-    const int initialMatches = playerCount / 2;
-    Round *round1 = new Round("Round " + QString::number(1), this);
-
-    int player = 0;
-    for (int matchNumber = 0; matchNumber < initialMatches; matchNumber++) {
-        Match *match = new Match(QString::number(matchNumber), this);
-        Competitor *a = new Competitor(BotModel::instance()->botName(player++), this);
-        Competitor *b = new Competitor(BotModel::instance()->botName(player++), this);
-        match->addCompetitor(a);
-        match->addCompetitor(b);
-        round1->addMatch(match);
+    for (Round *round : m_winnerBracket) {
+        round->clear();
+        round->deleteLater();
     }
-    m_winnerBracket.append(round1);
+    m_winnerBracket.clear();
+    for (Round *round : m_loserBracket) {
+        round->clear();
+        round->deleteLater();
+    }
+    m_loserBracket.clear();
 
-    if (oddNumber) {
-        qWarning() << "Odd number of players";
+    int roundNumber = 1;
+    int matchNumber = 1;
+    QStringList players = BotModel::instance()->botNames();
+    const int playerCount = players.count();
+    int byes = 0;
+    // If player count is not a power of two, we need to add byes
+    if (!isPowerOfTwo(playerCount)) {
+        byes = qNextPowerOfTwo(playerCount) - playerCount;
+    }
+    Round *winnerRound = new Round("Round " + QString::number(roundNumber++), this);
+    const int initialMatches = (playerCount - byes) / 2;
+//    int accumulatedLosers = 0;
+    for (int i=0; i<initialMatches; i++) {
+            Match *match = new Match(QString::number(matchNumber++), winnerRound);
 
-        Match *match = new Match(QString::number(initialMatches + 1), this);
-        match->addCompetitor(new Competitor(BotModel::instance()->botName(player), this));
-        Round *round2 = new Round("Round " + QString::number(2), this);
-        round2->addMatch(match);
-        m_winnerBracket.append(round2);
+            if (!players.isEmpty()) {
+                match->addCompetitor(new Competitor(players.takeFirst(), match));
+            }
+            if (!players.isEmpty()) {
+                match->addCompetitor(new Competitor(players.takeFirst(), match));
+            }
+            winnerRound->addMatch(match);
+
+//            accumulatedLosers++;
+    }
+    m_winnerBracket.append(winnerRound);
+
+    qDebug() << "byes" << "power of two winners?" << isPowerOfTwo(initialMatches);
+//    qDebug() << "losers" << accumulatedLosers;
+
+    if (byes) {
+        winnerRound = new Round("Round " + QString::number(roundNumber++), this);
+        const int playersLeft = players.count();
+        const int singles = qNextPowerOfTwo(playersLeft) - playersLeft;
+
+        for (int i=0; i<singles; i++) {
+            Match *match = new Match(QString::number(matchNumber++), winnerRound);
+            if (!players.isEmpty()) {
+                match->addCompetitor(new Competitor(players.takeFirst(), match));
+            }
+            winnerRound->addMatch(match);
+//            accumulatedLosers++;
+        }
+
+        const int overflow = playersLeft - singles;
+        for (int i=0; i<overflow/2; i++) {
+            Match *match = new Match(QString::number(matchNumber++), winnerRound);
+            if (!players.isEmpty()) {
+                match->addCompetitor(new Competitor(players.takeFirst(), match));
+            }
+            if (!players.isEmpty()) {
+                match->addCompetitor(new Competitor(players.takeFirst(), match));
+            }
+            winnerRound->addMatch(match);
+//            accumulatedLosers++;
+        }
+        const int missingMatches = (initialMatches - singles) / 2;
+        for (int i=0; i<missingMatches; i++) {
+            Match *match = new Match(QString::number(matchNumber++), winnerRound);
+            winnerRound->addMatch(match);
+//            accumulatedLosers++;
+        }
+        m_winnerBracket.append(winnerRound);
     }
 
-    store();
+
+    if (!players.isEmpty()) {
+        qWarning() << "players not assigned!" << players;
+    }
+
+    // Fill up the rest of the winner rounds
+    while (m_winnerBracket.last()->matchCount() > 1) {
+        if (m_winnerBracket.last()->matchCount() == 2) {
+            winnerRound = new Round("Final", this);
+        } else {
+            winnerRound = new Round("Round " + QString::number(roundNumber++), this);
+        }
+        for (int i=0; i < m_winnerBracket.last()->matchCount()/2; i++) {
+            winnerRound->addMatch(new Match(QString::number(matchNumber++), winnerRound));
+        }
+        m_winnerBracket.append(winnerRound);
+    }
+
+    // Fill up the losers bracket
+    int accumulatedLosers = 0;
+    matchNumber = 1;
+    for (int i=0; i<m_winnerBracket.count(); i++) {
+        Round *loserRound = new Round("Loser round " + QString::number(i + 1), this);
+        accumulatedLosers += m_winnerBracket[i]->matchCount();
+        while (accumulatedLosers >= 2) {
+            Match *loserMatch = new Match(QString::number(matchNumber++), loserRound);
+            loserRound->addMatch(loserMatch);
+            accumulatedLosers -= 2;
+        }
+        accumulatedLosers += loserRound->matchCount();
+        m_loserBracket.append(loserRound);
+    }
+
+    // Fill up the rest of the loser rounds
+    while (accumulatedLosers >= 2) {
+        Round *loserRound = new Round("Loser round " + QString::number(roundNumber++), this);
+        while (accumulatedLosers >= 2) {
+            loserRound->addMatch(new Match(QString::number(matchNumber++), loserRound));
+            accumulatedLosers -= 2;
+        }
+        accumulatedLosers += loserRound->matchCount();
+        m_loserBracket.append(loserRound);
+    }
+
+    // Add tiebreaker
 
     emit winnerRoundsChanged();
+    emit losersRoundsChanged();
+
+    store();
 }
 
-Round *TournamentController::currentRound() const
+Round *TournamentController::currentWinnerRound() const
 {
     for (Round *round : m_winnerBracket) {
-        if (round->currentMatch()) {
-            return round;
-        }
-    }
-
-    for (Round *round : m_loserBracket) {
-        if (round->currentMatch()) {
+        if (round->firstUnplayedMatch()) {
             return round;
         }
     }
@@ -82,14 +184,36 @@ Round *TournamentController::currentRound() const
     return nullptr;
 }
 
+Round *TournamentController::currentLosersRound() const
+{
+
+    for (Round *round : m_loserBracket) {
+        if (round->firstUnplayedMatch()) {
+            return round;
+        }
+    }
+
+    return nullptr;
+}
+
+Round *TournamentController::nextWinnersRound()
+{
+    if (currentWinnerRound() == m_winnerBracket.last()) {
+        Round *round = new Round("Round " + QString::number(m_winnerBracket.count() + 1), this);
+        m_winnerBracket.append(round);
+    }
+
+    return m_winnerBracket.last();
+}
+
 QStringList TournamentController::getNextCompetitors() const
 {
-    const Round *nextRound = currentRound();
+    const Round *nextRound = currentWinnerRound();
     if (!nextRound) {
         qWarning() << "No rounds left";
         return QStringList();
     }
-    const Match *nextMatch = nextRound->currentMatch();
+    const Match *nextMatch = nextRound->firstUnplayedMatch();
     if (!nextMatch) {
         qWarning() << "No matches left";
         return QStringList();
@@ -132,7 +256,7 @@ void TournamentController::store() const
     }
 }
 
-int TournamentController::countRounds(QQmlListProperty<Round> *list)
+int TournamentController::countWinnersRounds(QQmlListProperty<Round> *list)
 {
     TournamentController *me = qobject_cast<TournamentController*>(list->object);
     if (!me) {
@@ -143,7 +267,18 @@ int TournamentController::countRounds(QQmlListProperty<Round> *list)
     return me->m_winnerBracket.count();
 }
 
-Round *TournamentController::round(QQmlListProperty<Round> *list, int num)
+int TournamentController::countLosersRounds(QQmlListProperty<Round> *list)
+{
+    TournamentController *me = qobject_cast<TournamentController*>(list->object);
+    if (!me) {
+        qWarning() << "Invalid object" << list->object;
+        return 0;
+    }
+
+    return me->m_loserBracket.count();
+}
+
+Round *TournamentController::winnersRound(QQmlListProperty<Round> *list, int num)
 {
     TournamentController *me = qobject_cast<TournamentController*>(list->object);
     if (!me) {
@@ -159,14 +294,44 @@ Round *TournamentController::round(QQmlListProperty<Round> *list, int num)
     return me->m_winnerBracket[num];
 }
 
+Round *TournamentController::losersRound(QQmlListProperty<Round> *list, int num)
+{
 
+    TournamentController *me = qobject_cast<TournamentController*>(list->object);
+    if (!me) {
+        qWarning() << "Invalid object" << list->object;
+        return nullptr;
+    }
+
+    if (num >= me->m_loserBracket.count()) {
+        qWarning() << "Invalid round number" << num;
+        return nullptr;
+    }
+
+    return me->m_loserBracket[num];
+}
+
+
+
+Round::~Round()
+{
+}
 
 QQmlListProperty<Match> Round::matches()
 {
     return QQmlListProperty<Match>(this, nullptr, &Round::countMatches, &Round::match);
 }
 
-Match *Round::currentMatch() const
+void Round::clear()
+{
+    for (Match *match : m_matches) {
+        match->clear();
+    }
+    m_matches.clear();
+    emit matchesChanged();
+}
+
+Match *Round::firstUnplayedMatch() const
 {
     for (Match *match : m_matches) {
         if (!match->isDone()) {
@@ -226,6 +391,12 @@ Match *Round::match(QQmlListProperty<Match> *list, int num)
 
 
 
+void Match::clear()
+{
+    m_competitors.clear();
+    emit competitorsChanged();
+}
+
 QQmlListProperty<Competitor> Match::competitors()
 {
     return QQmlListProperty<Competitor>(this, nullptr, &Match::countCompetitors, &Match::competitor);
@@ -269,27 +440,21 @@ bool Match::isDone() const
     return done;
 }
 
-void Match::setResult(const QString &name, int score)
+bool Match::isReady() const
+{
+    return m_competitors.count() > 1;
+}
+
+bool Match::setResult(const QString &name, int score)
 {
     for (Competitor *competitor : m_competitors) {
         if (competitor->name() == name) {
             competitor->setScore(score);
-            return;
+            return true;
         }
     }
 
-    Competitor *w = winner();
-    Competitor *l = loser();
-    if (!w || !l) {
-        return;
-    }
-    if (w->score() > l->score()) {
-        w->setWinner(true);
-        l->setWinner(false);
-    } else {
-        w->setWinner(false);
-        l->setWinner(false);
-    }
+    return false;
 }
 
 void Match::store(QSettings *settings) const

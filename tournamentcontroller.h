@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QQmlListProperty>
+#include <QDebug>
 
 class BotModel;
 class QSettings;
@@ -50,6 +51,7 @@ class Match : public QObject
 
 public:
     Match(const QString id, QObject *parent) : QObject(parent), m_id(id) {}
+    void clear();
     QQmlListProperty<Competitor> competitors();
 
     Competitor *winner() const;
@@ -57,8 +59,9 @@ public:
     QStringList competitorNames() const;
     void addCompetitor(Competitor *competitor);
     bool isDone() const;
+    bool isReady() const;
 
-    void setResult(const QString &name, int score);
+    bool setResult(const QString &name, int score);
 
     void store(QSettings *settings) const;
     void load(QSettings *settings);
@@ -82,15 +85,20 @@ class Round : public QObject
 
 public:
     Round(const QString &name, QObject *parent) : QObject(parent), m_name(name) {}
+    virtual ~Round();
     QQmlListProperty<Match> matches();
+
+    void clear();
 
     void addMatch(Match *match) { m_matches.append(match); emit matchesChanged(); }
     Match *match(int match) const { if (match >= m_matches.count()) { return nullptr; } return m_matches[match]; }
 
-    Match *currentMatch() const;
+    Match *firstUnplayedMatch() const;
 
     void store(QSettings *settings) const;
     void load(QSettings *settings);
+
+    int matchCount() const { return m_matches.count(); }
 
 signals:
     void matchesChanged();
@@ -106,18 +114,23 @@ private:
 class TournamentController : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QQmlListProperty<Round> rounds READ winnerRounds NOTIFY winnerRoundsChanged)
+    Q_PROPERTY(QQmlListProperty<Round> winnersRounds READ winnerRounds NOTIFY winnerRoundsChanged)
+    Q_PROPERTY(QQmlListProperty<Round> losersRounds READ losersRounds NOTIFY losersRoundsChanged)
 
 public:
     static TournamentController *instance() { static TournamentController me; return &me; }
 
     QQmlListProperty<Round> winnerRounds();
+    QQmlListProperty<Round> losersRounds();
 
-    void matchCompleted(const QMap<QString, int> &results);
+    void onMatchCompleted(const QMap<QString, int> &results);
 
     void initializeMatches();
 
-    Round *currentRound() const;
+    Round *currentWinnerRound() const;
+    Round *currentLosersRound() const;
+
+    Round *nextWinnersRound();
 
     QStringList getNextCompetitors() const;
 
@@ -126,14 +139,17 @@ public:
 
 signals:
     void winnerRoundsChanged();
+    void losersRoundsChanged();
 
 public slots:
 
 private:
-    TournamentController() { load(); if (m_winnerBracket.isEmpty()) { initializeMatches(); } }
+    TournamentController() { load(); qDebug() << m_winnerBracket.count(); if (m_winnerBracket.isEmpty()) { initializeMatches(); } }
 
-    static int countRounds(QQmlListProperty<Round> *list);
-    static Round *round(QQmlListProperty<Round> *list, int num);
+    static int countWinnersRounds(QQmlListProperty<Round> *list);
+    static int countLosersRounds(QQmlListProperty<Round> *list);
+    static Round *winnersRound(QQmlListProperty<Round> *list, int num);
+    static Round *losersRound(QQmlListProperty<Round> *list, int num);
 
     QList<Round*> m_winnerBracket;
     QList<Round*> m_loserBracket;

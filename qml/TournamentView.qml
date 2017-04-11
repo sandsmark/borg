@@ -2,19 +2,63 @@ import QtQuick 2.0
 import com.iskrembilen 1.0
 
 Rectangle {
+    Text {
+        id: winnerroundsTitle
+        anchors {
+            top: parent.top
+            left: parent.left
+        }
+        text: "Winners bracket:"
+    }
 
     Flickable {
-        anchors.fill: parent
-        contentWidth: roundRow.width
-        contentHeight: roundRow.height
+        anchors {
+            top: winnerroundsTitle.bottom
+            left: parent.left
+            right: parent.right
+            bottom: parent.verticalCenter
+        }
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
 
+        contentWidth: winnerRoundsRow.width
+        contentHeight: winnerRoundsRow.height
 
         Row {
-            id: roundRow
+            id: winnerRoundsRow
             Repeater {
-                model: TournamentController.rounds
+                model: TournamentController.winnersRounds
                 delegate: roundComponent
+            }
+        }
+    }
 
+    Text {
+        id: loserroundsTitle
+        anchors {
+            top: parent.verticalCenter
+            left: parent.left
+        }
+        text: "Losers bracket:"
+    }
+    Flickable {
+        anchors {
+            top: loserroundsTitle.bottom
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+        }
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+
+        contentWidth: losersRoundsRow.width
+        contentHeight: losersRoundsRow.height
+
+        Row {
+            id: losersRoundsRow
+            Repeater {
+                model: TournamentController.losersRounds
+                delegate: roundComponent
             }
         }
     }

@@ -70,6 +70,7 @@ public:
 
     void resetBots();
 
+    QStringList botNames() const;
     int botWins(const QString &name) const;
     QString botName(int row) const { if (row >= rowCount()) return QString::null; return m_bots[row].name; }
     bool botIsValid(const QString botName);

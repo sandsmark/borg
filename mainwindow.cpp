@@ -160,7 +160,7 @@ MainWindow::MainWindow(QWidget *parent)
     tournamentView->setResizeMode(QQuickWidget::SizeRootObjectToView);
     tournamentView->rootObject()->setProperty("color", tournamentView->palette().color(tournamentView->backgroundRole()));
     tabWidget->addTab(tournamentView, "Tournament view");
-    tabWidget->setCurrentIndex(1);
+//    tabWidget->setCurrentIndex(1);
 
     ///////////
     /// Server control
@@ -368,7 +368,7 @@ void MainWindow::readServerOut()
 
 void MainWindow::addBot()
 {
-    QString path = QFileDialog::getOpenFileName(this, tr("Select bot"), QStringLiteral("/home/sandsmark/tg/16/ai"));
+    QString path = QFileDialog::getOpenFileName(this, tr("Select bot"), QStringLiteral("/home/sandsmark/tg/17/ai"));
     m_botModel->addBot(path);
 }
 
@@ -438,9 +438,10 @@ void MainWindow::serverFinished(int status)
         }
 
         m_botModel->roundOver(name, (playersRead == 0), wins, points);
+        results[name] = wins;
         playersRead++;
     }
-    TournamentController::instance()->matchCompleted(results);
+    TournamentController::instance()->onMatchCompleted(results);
 
     if (playersRead != m_botModel->enabledPlayers()) {
         QMessageBox::warning(this, tr("Missing players"), tr("Missing players from the scores.txt, please adjust manually"));
@@ -468,6 +469,7 @@ void MainWindow::resetBots()
     m_roundsPlayed = 0;
     saveSettings();
     m_botModel->resetBots();
+    TournamentController::instance()->initializeMatches();
     updateName();
     updateTopPlayers();
 }
