@@ -16,12 +16,13 @@ class Competitor : public QObject
     Q_PROPERTY(bool winner MEMBER m_winner NOTIFY winnerChanged)
     Q_PROPERTY(int score READ score NOTIFY scoreChanged)
     Q_PROPERTY(bool isValid READ isValid CONSTANT)
+    Q_PROPERTY(bool done READ done NOTIFY doneChanged)
 
 public:
     Competitor(QString name, QObject *parent);
 
     int score() const { return m_score; }
-    void setScore(int score) { m_done = true; m_score = score; emit scoreChanged(); }
+    void setScore(int score) { m_done = true; m_score = score; emit scoreChanged(); emit doneChanged(); }
     void setWinner(bool winner) { m_winner = winner; emit winnerChanged(); }
     bool done() const { return m_done; }
     QString name() const { return m_name; }
@@ -34,6 +35,7 @@ public:
 signals:
     void scoreChanged();
     void winnerChanged();
+    void doneChanged();
 
 private:
 

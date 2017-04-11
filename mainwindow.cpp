@@ -132,8 +132,11 @@ MainWindow::MainWindow(QWidget *parent)
     ///
     QWidget *addRemoveGroup = new QWidget;
     addRemoveGroup->setLayout(new QHBoxLayout);
-    addRemoveGroup->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
     setupLayout->addWidget(addRemoveGroup);
+    // Reset button
+    QPushButton *resetButton = new QPushButton(tr("Reset tournament"));
+    addRemoveGroup->layout()->addWidget(resetButton);
+    addRemoveGroup->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
     // Add button
     QPushButton *addButton = new QPushButton(tr("&Add new bot..."));
     connect(addButton, SIGNAL(clicked()), SLOT(addBot()));
@@ -205,9 +208,6 @@ MainWindow::MainWindow(QWidget *parent)
     serverSettings->layout()->addWidget(m_tickless);
     m_tickless->setChecked(settings.value(TICKLESS_KEY, false).toBool());
     serverSettingsLayout->addStretch();
-    // Reset button
-    QPushButton *resetButton = new QPushButton(tr("Reset tournament"));
-    serverSettingsLayout->addWidget(resetButton);
 
     ///////////
     /// Right part of window
@@ -222,6 +222,7 @@ MainWindow::MainWindow(QWidget *parent)
     updateTopPlayers();
     // Log/output view
     m_serverOutput.setReadOnly(true);
+    m_serverOutput.setTextColor(Qt::white);
     rightLayout->addWidget(&m_serverOutput, 10);
     // Server launch button
     m_launchButton = new QPushButton(tr("&Start server"));
@@ -464,10 +465,9 @@ void MainWindow::updateTopPlayers()
 
 void MainWindow::errorOutput(QString message)
 {
-    QColor oldColor = m_serverOutput.textColor();
     m_serverOutput.setTextColor(Qt::red);
     m_serverOutput.append(message);
-    m_serverOutput.setTextColor(oldColor);
+    m_serverOutput.setTextColor(Qt::white);
 
     if (m_logFile.isOpen()) {
         m_logFile.write(message.toUtf8() + "\n");
@@ -477,6 +477,7 @@ void MainWindow::errorOutput(QString message)
 void MainWindow::normalOutput(QString message)
 {
     m_serverOutput.append(message);
+    m_serverOutput.setTextColor(Qt::white);
 
     if (m_logFile.isOpen()) {
         m_logFile.write(message.toUtf8() + "\n");

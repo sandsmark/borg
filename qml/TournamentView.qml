@@ -16,108 +16,36 @@ Rectangle {
         onEntered: tournamentView.hoveredName = ""
     }
 
-    Rectangle {
-        id: header
-        anchors {
-            top: parent.top
-            left: parent.left
-            right: parent.right
-            margins: 5
-        }
-
-        color: lightBackground
-        height: winnerroundsTitle.height + 20
-        border.color: foreground
-        border.width: 1
-
-        Text {
-            id: winnerroundsTitle
-            anchors {
-                left: parent.left
-                leftMargin: 10
-                verticalCenter: parent.verticalCenter
-            }
-            text: "Winners bracket:"
-            font.bold: true
-            color: foreground
-        }
-    }
-
     Flickable {
         id: winnerFlickable
-        anchors {
-            top: header.bottom
-            left: parent.left
-            right: parent.right
-            bottom: parent.verticalCenter
-            margins: 5
-        }
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
+        anchors.fill: parent
+        anchors.margins: 5
+//        boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar { }
+        ScrollBar.horizontal: ScrollBar { }
 
 
-        contentWidth: winnerRoundsRow.width
-        contentHeight: winnerRoundsRow.height
+        contentWidth: contents.width
+        contentHeight: contents.height
 
-        Row {
-            id: winnerRoundsRow
+        Column {
+            id: contents
             spacing: 30
-            Repeater {
-                model: TournamentController.winnersRounds
-                delegate: roundComponent
+            Row {
+                id: winnerRoundsRow
+                spacing: 30
+                Repeater {
+                    model: TournamentController.winnersRounds
+                    delegate: roundComponent
+                }
             }
-        }
-    }
-
-    Rectangle {
-        id: separator
-        anchors {
-            top: parent.verticalCenter
-            left: parent.left
-            right: parent.right
-            margins: 5
-        }
-
-        color: lightBackground
-        height: loserroundsTitle.height + 20
-        border.color: foreground
-        border.width: 1
-
-        Text {
-            id: loserroundsTitle
-            anchors {
-                left: parent.left
-                leftMargin: 10
-                verticalCenter: parent.verticalCenter
-            }
-
-            text: "Losers bracket:"
-            font.bold: true
-            color: foreground
-        }
-    }
-
-    Flickable {
-        anchors {
-            top: separator.bottom
-            left: parent.left
-            right: parent.right
-            bottom: parent.bottom
-            margins: 5
-        }
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-
-        contentWidth: losersRoundsRow.width
-        contentHeight: losersRoundsRow.height
-
-        Row {
-            id: losersRoundsRow
-            spacing: 30
-            Repeater {
-                model: TournamentController.losersRounds
-                delegate: roundComponent
+            Row {
+                id: losersRoundsRow
+                spacing: 30
+                Repeater {
+                    model: TournamentController.losersRounds
+                    delegate: roundComponent
+                }
             }
         }
     }
@@ -221,7 +149,7 @@ Rectangle {
             border.color: hovered ? foreground : "black"
             property bool hovered: tournamentView.hoveredName === name
 
-            Behavior on border.color { ColorAnimation { duration: 100 } }
+            Behavior on color { ColorAnimation { duration: 2000 } }
 
             Text {
                 id: nameText
@@ -255,6 +183,7 @@ Rectangle {
                 Behavior on color { ColorAnimation { duration: 100 } }
                 color: foreground
                 font.bold: winner
+                visible: done
             }
 
 
