@@ -227,7 +227,7 @@ void BotModel::launchBots()
                 arguments << m_bots[i].arguments.split(' ');
             }
 
-            qDebug() << "launching" << arguments;
+            qDebug() << "launching" << runtimes()[m_bots[i].runtime] << file.fileName() << m_bots[i].arguments;
         }
         m_bots[i].process->start("/usr/bin/firejail", arguments);
     }
@@ -309,11 +309,16 @@ void BotModel::addBot(QString path)
         QMessageBox::warning(0, tr("Unable to add bot"), tr("The path to the bot does not exist."));
         return;
     }
+    const QString name = file.dir().dirName();
+    if (botNames().contains(name)) {
+        qWarning() << "Bot" << name << "is already added";
+        return;
+    }
 
     Bot bot;
-    bot.enabled = false;
+    bot.enabled = true;
     bot.path = path;
-    bot.name = file.dir().dirName();
+    bot.name = name;
     bot.wins = 0;
     bot.roundWins = 0;
     bot.totalScore = 0;
