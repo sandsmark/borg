@@ -48,8 +48,9 @@ private:
 class Match : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString name MEMBER m_id CONSTANT)
+    Q_PROPERTY(QString name READ name CONSTANT)
     Q_PROPERTY(QQmlListProperty<Competitor> competitors READ competitors NOTIFY competitorsChanged)
+    Q_PROPERTY(bool isDone READ isDone NOTIFY isDoneChanged)
 
 public:
     Match(const QString id, QObject *parent) : QObject(parent), m_id(id) {}
@@ -68,8 +69,11 @@ public:
     void store(QSettings *settings) const;
     void load(QSettings *settings);
 
+    QString name() const { return m_id; }
+
 signals:
     void competitorsChanged();
+    void isDoneChanged();
 
 private:
     static int countCompetitors(QQmlListProperty<Competitor> *list);
@@ -82,7 +86,7 @@ private:
 class Round : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString name MEMBER m_name CONSTANT)
+    Q_PROPERTY(QString name READ name CONSTANT)
     Q_PROPERTY(QQmlListProperty<Match> matches READ matches NOTIFY matchesChanged)
 
 public:
@@ -102,6 +106,7 @@ public:
     void load(QSettings *settings);
 
     int matchCount() const { return m_matches.count(); }
+    QString name() const { return m_name; }
 
 signals:
     void matchesChanged();
@@ -119,6 +124,8 @@ class TournamentController : public QObject
     Q_OBJECT
     Q_PROPERTY(QQmlListProperty<Round> winnersRounds READ winnerRounds NOTIFY winnerRoundsChanged)
     Q_PROPERTY(QQmlListProperty<Round> losersRounds READ losersRounds NOTIFY losersRoundsChanged)
+    Q_PROPERTY(QString nextMatch READ nextMatchName NOTIFY nextMatchChanged)
+    Q_PROPERTY(QString nextRound READ nextRoundName NOTIFY nextMatchChanged)
 
 public:
     static TournamentController *instance() { static TournamentController me; return &me; }
@@ -128,7 +135,6 @@ public:
 
     void onMatchCompleted(const QMap<QString, int> &results);
 
-    void initializeMatches();
 
     Round *nextUnplayedRound() const;
 
@@ -140,14 +146,19 @@ public:
     void load();
     void store() const;
 
+    QString nextMatchName() const;
+    QString nextRoundName() const;
+
 signals:
     void winnerRoundsChanged();
     void losersRoundsChanged();
+    void nextMatchChanged();
 
 public slots:
+    void initializeMatches();
 
 private:
-    TournamentController() { load(); qDebug() << m_winnerBracket.count(); if (m_winnerBracket.isEmpty()) { initializeMatches(); } }
+    TournamentController() { load(); }
 
     static int countWinnersRounds(QQmlListProperty<Round> *list);
     static int countLosersRounds(QQmlListProperty<Round> *list);

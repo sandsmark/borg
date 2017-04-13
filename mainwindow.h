@@ -32,6 +32,7 @@ private slots:
     void readServerOut();
 
     void addBot();
+    void addBots();
     void removeBot();
 
     void kill();
@@ -52,7 +53,6 @@ private:
     QCheckBox *m_fullscreen;
     QCheckBox *m_headless;
     QCheckBox *m_tickless;
-    QPushButton *m_launchButton;
     QProcess m_serverProcess;
     QTextEdit m_serverOutput;
     QFile m_logFile;

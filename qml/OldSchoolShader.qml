@@ -27,16 +27,16 @@ ShaderEffect {
 
     property color fontColor: "#9fffc9";//appSettings.fontColor
     property color backgroundColor: "black";// appSettings.backgroundColor
-    property real bloom: 0.4 *  2.5//appSettings.bloom * 2.5
+    property real bloom: 0.6 *  2.5//appSettings.bloom * 2.5
 
     property real burnIn: 0.6; //appSettings.burnIn
 
-    property real jitter: 0.20 * 0.007//appSettings.jitter * 0.007
+    property real jitter: 0.5 * 0.007//appSettings.jitter * 0.007
     property real staticNoise: 0.2//appSettings.staticNoise
     property size scaleNoiseSize: Qt.size((width) / (noiseTexture.width * 1),
                                           (height) / (noiseTexture.height * 1))
 
-    property real screenCurvature: 0.07//appSettings.screenCurvature
+    property real screenCurvature: 0.1//appSettings.screenCurvature
     property real glowingLine: 0.16 * 0.2//appSettings.glowingLine * 0.2
 
     property real chromaColor: 0.2//appSettings.chromaColor;
@@ -66,7 +66,7 @@ ShaderEffect {
     property size rasterizationSmooth: Qt.size(
                                            clamp(2.0 * virtual_resolution.width / (width ), 0.0, 1.0),
                                            clamp(2.0 * virtual_resolution.height / (height ), 0.0, 1.0))
-    onRasterizationSmoothChanged: console.log(rasterizationSmooth)
+//    onRasterizationSmoothChanged: console.log(rasterizationSmooth)
 
     property real dispX: 12 / width
     property real dispY: 12 / height
@@ -102,7 +102,7 @@ ShaderEffect {
     //Smooth random texture used for flickering effect.
     Image{
         id: noiseTexture
-        source: "qrc:/sprites/allNoise512.png"
+        source: "qrc:/allNoise512.png"
         width: 512
         height: 512
         fillMode: Image.Tile

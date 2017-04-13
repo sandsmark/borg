@@ -14,7 +14,6 @@
 #include <QApplication>
 #include <QGroupBox>
 #include <QSettings>
-#include <QPushButton>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
@@ -30,6 +29,7 @@
 #include <QQuickItem>
 #include <QQmlContext>
 #include <QQmlEngine>
+#include <QAction>
 
 #define SERVERPATH_KEY    "serverpath"
 #define ROUNDS_KEY        "rounds"
@@ -127,26 +127,35 @@ MainWindow::MainWindow(QWidget *parent)
     m_botsView->setAlternatingRowColors(true);
     setupLayout->addWidget(m_botsView);
 
+
     ///////////
     /// Add/remove buttons
     ///
     QWidget *addRemoveGroup = new QWidget;
     addRemoveGroup->setLayout(new QHBoxLayout);
     setupLayout->addWidget(addRemoveGroup);
-    // Reset button
-    QPushButton *resetButton = new QPushButton(tr("Reset tournament"));
-    addRemoveGroup->layout()->addWidget(resetButton);
+    // Reset tournament button
+    QPushButton *resetBotButton = new QPushButton(tr("Reset &bots"));
+    addRemoveGroup->layout()->addWidget(resetBotButton);
+    // Reset tournament button
+    QPushButton *resetTournamentButton = new QPushButton(tr("&Reset tournament"));
+    addRemoveGroup->layout()->addWidget(resetTournamentButton);
+    connect(resetTournamentButton, &QAbstractButton::clicked, this, &MainWindow::resetBots);
     addRemoveGroup->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
     // Add button
     QPushButton *addButton = new QPushButton(tr("&Add new bot..."));
-    connect(addButton, SIGNAL(clicked()), SLOT(addBot()));
+    connect(addButton, &QPushButton::clicked, this, &MainWindow::addBot);
     addRemoveGroup->layout()->addWidget(addButton);
+    // Add multiple button
+    QPushButton *addMultipleButton = new QPushButton(tr("Add &multiple bots..."));
+    connect(addMultipleButton, &QPushButton::clicked, this, &MainWindow::addBots);
+    addRemoveGroup->layout()->addWidget(addMultipleButton);
     // Remove button
-    QPushButton *removeButton = new QPushButton(tr("Remove selected"));
+    QPushButton *removeButton = new QPushButton(tr("Remo&ve selected"));
     connect(removeButton, SIGNAL(clicked()), SLOT(removeBot()));
     addRemoveGroup->layout()->addWidget(removeButton);
 
-    tabWidget->addTab(setupWidget, "Setup");
+    tabWidget->addTab(setupWidget, "S&etup");
 
     ///////////
     /// Server control
@@ -222,12 +231,12 @@ MainWindow::MainWindow(QWidget *parent)
     updateTopPlayers();
     // Log/output view
     m_serverOutput.setReadOnly(true);
-    m_serverOutput.setTextColor(Qt::white);
+//    m_serverOutput.setTextColor(Qt::black);
     rightLayout->addWidget(&m_serverOutput, 10);
     // Server launch button
-    m_launchButton = new QPushButton(tr("&Start server"));
-    m_launchButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    rightLayout->addWidget(m_launchButton, 2);
+    QPushButton *launchButton = new QPushButton(tr("&Start server"));
+    launchButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    rightLayout->addWidget(launchButton, 2);
     // Kill button
     QPushButton *killButton = new QPushButton(tr("&Kill server"));
     rightWidget->layout()->addWidget(killButton);
@@ -241,8 +250,17 @@ MainWindow::MainWindow(QWidget *parent)
     connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
     rightWidget->layout()->addWidget(quitButton);
 
+    QAction *showUiAction = new QAction;
+    showUiAction->setShortcut(Qt::Key_Escape);
+    connect(showUiAction, &QAction::triggered, this, [=]() {
+        rightWidget->setVisible(!rightWidget->isVisible());
+        tabWidget->tabBar()->setVisible(!tabWidget->tabBar()->isVisible());
+    });
+    addAction(showUiAction);
+
     // Connections
-    connect(killButton, SIGNAL(clicked()), SLOT(kill()));
+//    connect(killButton, SIGNAL(clicked()), SLOT(kill()));
+    connect(killButton, &QPushButton::clicked, this, &MainWindow::kill);
 
     connect(m_serverPath, &PathEditor::pathChanged, this, &MainWindow::saveSettings);
     connect(m_rounds, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &MainWindow::saveSettings);
@@ -254,13 +272,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_headless, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
     connect(m_tickless, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
 
-    connect(m_launchButton, &QAbstractButton::clicked, this, &MainWindow::launchServer);
-    connect(resetButton, &QAbstractButton::clicked, this, &MainWindow::resetBots);
+    connect(launchButton, &QAbstractButton::clicked, this, &MainWindow::launchServer);
     connect(&m_serverProcess, &QProcess::readyReadStandardError, this, &MainWindow::readServerErr);
     connect(&m_serverProcess, &QProcess::readyReadStandardOutput, this, &MainWindow::readServerOut);
     connect(&m_serverProcess, static_cast<void(QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this, &MainWindow::serverFinished);
 
-    setMinimumSize(1920, 1200);
+    setMinimumSize(1920, 1080);
 }
 
 MainWindow::~MainWindow()
@@ -354,7 +371,41 @@ void MainWindow::readServerOut()
 void MainWindow::addBot()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Select bot"), QStringLiteral("/home/sandsmark/tg/17/ai"));
+    if (path.isEmpty()) {
+        return;
+    }
+
     m_botModel->addBot(path);
+}
+
+void MainWindow::addBots()
+{
+    QString dirPath = QFileDialog::getExistingDirectory(this, tr("Open Directory"),
+                QStringLiteral("/home/sandsmark/tg/17/ai"),
+                                                    QFileDialog::ShowDirsOnly
+                                                    | QFileDialog::DontResolveSymlinks);
+    if (dirPath.isEmpty()) {
+        return;
+    }
+    qDebug() << "Checking for bots in" << dirPath;
+    QDir dir(dirPath);
+    for (const QString &subinfo : dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+//    for (const QFileInfo &subinfo : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+//        qDebug() << subinfo.absolutePath();
+//        QDir subdir(subinfo.absoluteDir());
+        QDir subdir(dir.filePath(subinfo));
+        qDebug() << subdir;
+        QFileInfoList files = subdir.entryInfoList(QDir::Files | QDir::Executable);
+        if (!files.isEmpty()) {
+            m_botModel->addBot(files.first().absoluteFilePath());
+            continue;
+        }
+        files = subdir.entryInfoList(QDir::Files | QDir::Readable);
+        if (files.count() != 1) {
+            continue;
+        }
+        m_botModel->addBot(files.first().absoluteFilePath());
+    }
 }
 
 void MainWindow::removeBot()
@@ -404,7 +455,7 @@ void MainWindow::serverFinished(int status)
 
     QMap<QString, int> results;
     while (!resultsLog.atEnd()) {
-        QList<QByteArray> player = resultsLog.readLine().trimmed().split(' ');
+        QList<QByteArray> player = resultsLog.readLine().trimmed().split(';');
         if (player.length() != 3) {
             QMessageBox::warning(this, tr("Invalid scores.txt"), tr("The scores.txt file is corrupt (invalid column), please adjust scores manually."));
             return;
@@ -465,9 +516,13 @@ void MainWindow::updateTopPlayers()
 
 void MainWindow::errorOutput(QString message)
 {
+    message = message.trimmed();
+    if (message.isEmpty()) {
+        return;
+    }
     m_serverOutput.setTextColor(Qt::red);
     m_serverOutput.append(message);
-    m_serverOutput.setTextColor(Qt::white);
+    m_serverOutput.setTextColor(Qt::black);
 
     if (m_logFile.isOpen()) {
         m_logFile.write(message.toUtf8() + "\n");
@@ -476,8 +531,12 @@ void MainWindow::errorOutput(QString message)
 
 void MainWindow::normalOutput(QString message)
 {
+    message = message.trimmed();
+    if (message.isEmpty()) {
+        return;
+    }
     m_serverOutput.append(message);
-    m_serverOutput.setTextColor(Qt::white);
+//    m_serverOutput.setTextColor(Qt::black);
 
     if (m_logFile.isOpen()) {
         m_logFile.write(message.toUtf8() + "\n");

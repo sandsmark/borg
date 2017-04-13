@@ -499,20 +499,21 @@ void BotModel::storeOutput()
         if (m_bots[i].process.data() != sender()) continue;
 
         QByteArray err = m_bots[i].process->readAllStandardError();
-        if (!err.isEmpty()) {
-            const QStringList arguments = m_bots[i].process->arguments();
-            if (arguments.count() > 7) {
+//        qDebug() << m_bots[i].name << err;
+//        if (!err.isEmpty()) {
+//            const QStringList arguments = m_bots[i].process->arguments();
+//            if (arguments.count() > 7) {
 //                qDebug() << arguments[7] << err;
-        } else {
+//        } else {
 //                qDebug() << arguments << err;
-            }
-        }
-        m_bots[i].logfile->write(err);
-//        QByteArray out = m_bots[i].process->readAllStandardOutput();
-//        if (!out.isEmpty()) {
-//            qDebug() << m_bots[i].process->program() << out;
+//            }
 //        }
-//        m_bots[i].logfile->write(out);
+        m_bots[i].logfile->write(err);
+        QByteArray out = m_bots[i].process->readAllStandardOutput();
+        if (!out.isEmpty()) {
+//            qDebug() << m_bots[i].name << out;
+        }
+        m_bots[i].logfile->write(out);
         return;
     }
     qWarning() << "Unable to find bot with process" << sender();

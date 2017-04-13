@@ -2,5 +2,10 @@
     <qresource prefix="/">
         <file>names.txt</file>
         <file alias="TournamentView.qml">qml/TournamentView.qml</file>
+        <file alias="OldSchoolShader.qml">qml/OldSchoolShader.qml</file>
+        <file>allNoise512.png</file>
+        <file>corners.svg</file>
+        <file>end.svg</file>
+        <file>Perfect Dark Zero.ttf</file>
     </qresource>
 </RCC>

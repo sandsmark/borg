@@ -15,8 +15,24 @@ QQmlListProperty<Round> TournamentController::losersRounds()
     return QQmlListProperty<Round>(this, nullptr, &TournamentController::countLosersRounds, &TournamentController::losersRound);
 }
 
+static bool hasDuplicates(const QList<int> &list)
+{
+    const int first = list.first();
+    for (const int num : list) {
+        if (num != first) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void TournamentController::onMatchCompleted(const QMap<QString, int> &results)
 {
+    // Verify that it wasn't a tie, because then run it again cuz I'm lazy
+    if (hasDuplicates(results.values())) {
+        return;
+    }
+
     Round *round = nextUnplayedRound();
     if (!round) {
         qWarning() << "Failed to get current round";
@@ -29,6 +45,9 @@ void TournamentController::onMatchCompleted(const QMap<QString, int> &results)
         return;
     }
 
+    bool isLosersBracket = m_loserBracket.contains(round);
+    qDebug() << "Was losers bracket?" << isLosersBracket;
+
     for (const QString &name : results.keys()) {
         currentMatch->setResult(name, results[name]);
     }
@@ -39,14 +58,26 @@ void TournamentController::onMatchCompleted(const QMap<QString, int> &results)
     loser->setWinner(false);
 
     Round *nextWinnerRound = nextOpenWinnersRound();
-    if (nextWinnerRound) {
-        nextWinnerRound->firstOpenMatch()->addCompetitor(new Competitor(winner->name(), nextWinnerRound));
+    Round *nextLoserRound = nextOpenLosersRound();
+
+    if (isLosersBracket) {
+        if (nextLoserRound) {
+            nextLoserRound->firstOpenMatch()->addCompetitor(new Competitor(winner->name(), nextLoserRound));
+        } else {
+            // The final
+            nextWinnerRound->firstOpenMatch()->addCompetitor(new Competitor(winner->name(), nextWinnerRound));
+        }
+    } else {
+        if (nextWinnerRound) {
+            nextWinnerRound->firstOpenMatch()->addCompetitor(new Competitor(winner->name(), nextWinnerRound));
+        }
+
+        if (nextLoserRound) {
+            nextLoserRound->firstOpenMatch()->addCompetitor(new Competitor(loser->name(), nextLoserRound));
+        }
     }
 
-    Round *nextLoserRound = nextOpenLosersRound();
-    if (nextLoserRound) {
-        nextLoserRound->firstOpenMatch()->addCompetitor(new Competitor(loser->name(), nextLoserRound));
-    }
+    emit nextMatchChanged();
 
     store();
 }
@@ -97,9 +128,6 @@ void TournamentController::initializeMatches()
 //            accumulatedLosers++;
     }
     m_winnerBracket.append(winnerRound);
-
-    qDebug() << "byes" << "power of two winners?" << isPowerOfTwo(initialMatches);
-//    qDebug() << "losers" << accumulatedLosers;
 
     if (byes) {
         winnerRound = new Round("Round " + QString::number(roundNumber++), this);
@@ -156,7 +184,7 @@ void TournamentController::initializeMatches()
 
     // Fill up the losers bracket
     int accumulatedLosers = 0;
-    matchNumber = 1;
+//    matchNumber = 1;
     for (int i=0; i<m_winnerBracket.count(); i++) {
         Round *loserRound = new Round("Loser round " + QString::number(i + 1), this);
         accumulatedLosers += m_winnerBracket[i]->matchCount();
@@ -289,6 +317,30 @@ void TournamentController::store() const
     }
 }
 
+QString TournamentController::nextMatchName() const
+{
+    Round *nextRound = nextUnplayedRound();
+    if (!nextRound) {
+        return QString::null;
+    }
+    Match *nextMatch = nextRound->firstUnplayedMatch();
+    if (!nextMatch) {
+        return QString::null;
+    }
+
+    return nextMatch->name();
+}
+
+QString TournamentController::nextRoundName() const
+{
+    Round *nextRound = nextUnplayedRound();
+    if (!nextRound) {
+        return QString::null;
+    }
+
+    return nextRound->name();
+}
+
 int TournamentController::countWinnersRounds(QQmlListProperty<Round> *list)
 {
     TournamentController *me = qobject_cast<TournamentController*>(list->object);
@@ -367,7 +419,7 @@ void Round::clear()
 Match *Round::firstUnplayedMatch() const
 {
     for (Match *match : m_matches) {
-        if (!match->isDone()) {
+        if (!match->isDone() && match->isReady()) {
             return match;
         }
     }
@@ -473,10 +525,15 @@ void Match::addCompetitor(Competitor *competitor)
 {
     m_competitors.append(competitor);
     emit competitorsChanged();
+    emit isDoneChanged();
 }
 
 bool Match::isDone() const
 {
+    if (m_competitors.isEmpty()) {
+        return false;
+    }
+
     bool done = true;
     for (const Competitor *competitor : m_competitors) {
         done = done && competitor->done();
@@ -494,6 +551,7 @@ bool Match::setResult(const QString &name, int score)
     for (Competitor *competitor : m_competitors) {
         if (competitor->name() == name) {
             competitor->setScore(score);
+            emit isDoneChanged();
             return true;
         }
     }
