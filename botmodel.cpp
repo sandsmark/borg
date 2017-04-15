@@ -11,7 +11,8 @@
 
 #define BOTS_KEY "bots"
 
-BotModel::BotModel()
+BotModel::BotModel() :
+    m_tournamentMode(false)
 {
     QSettings settings;
     m_bots = settings.value(BOTS_KEY, QVariant::fromValue(QList<Bot>())).value<QList<Bot> >();
@@ -196,8 +197,11 @@ void BotModel::launchBots()
     beginResetModel(); // For running info
     const QStringList botsToLaunch = TournamentController::instance()->getNextCompetitors();
     for (int i=0; i<m_bots.length(); i++) {
-        if (!m_bots[i].enabled) continue;
-        if (!botsToLaunch.contains(m_bots[i].name)) continue;
+        if (m_tournamentMode) {
+            if (!botsToLaunch.contains(m_bots[i].name)) continue;
+        } else {
+            if (!m_bots[i].enabled) continue;
+        }
 
         QFileInfo file(m_bots[i].path);
         m_bots[i].process->setWorkingDirectory(file.path());
@@ -261,6 +265,7 @@ void BotModel::handleProcessError(QProcess::ProcessError error)
         } else {
             qWarning() << arguments;
         }
+        qWarning() << process->errorString();
 //        if (process->arguments().count()> 1) {
 //            qWarning() << "Error from bot: " << process->arguments()[0];
 //        } else {
@@ -392,14 +397,17 @@ void BotModel::roundOver(QString name, bool isWinner, int roundWins, int score)
 
 int BotModel::enabledPlayers()
 {
-    return TournamentController::instance()->getNextCompetitors().count();
-//    int ret = 0;
-//    foreach(const Bot &bot, m_bots) {
-//        if (bot.enabled) {
-//            ret++;
-//        }
-//    }
-//    return ret;
+    if (m_tournamentMode) {
+        return TournamentController::instance()->getNextCompetitors().count();
+    } else {
+        int ret = 0;
+        foreach(const Bot &bot, m_bots) {
+            if (bot.enabled) {
+                ret++;
+            }
+        }
+        return ret;
+    }
 }
 
 bool compareBots(Bot *a, const Bot *b)

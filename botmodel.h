@@ -75,6 +75,8 @@ public:
     QString botName(int row) const { if (row >= rowCount()) return QString::null; return m_bots[row].name; }
     bool botIsValid(const QString botName);
 
+    void setTournamentMode(bool enabled) { m_tournamentMode = enabled; }
+
 public slots:
     void launchBots();
     void killBots();
@@ -89,6 +91,7 @@ private:
     void initializeBotProcess(Bot *bot);
 
     QList<Bot> m_bots;
+    bool m_tournamentMode;
 };
 
 #endif // BOTMODEL_H

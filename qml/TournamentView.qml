@@ -252,6 +252,17 @@ Rectangle {
 
                 font.bold: winner
                 font.family: "Aldrich"
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.RightButton
+                    onClicked: {
+                        console.log("LOL " + mouse.button)
+                        if (mouse.button == Qt.RightButton) {
+                            parent.color = "red"
+                        }
+                    }
+                }
             }
 
             Text {
@@ -267,15 +278,31 @@ Rectangle {
                 text: score
                 font.pixelSize: fontPixelSize
                 color: "white"
-                visible: done
                 font.family: "Aldrich"
-                opacity: nameText.opacity
+                opacity: done ? nameText.opacity : 0
 
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.RightButton
+                    onClicked: {
+                        console.log("LOL " + mouse.button)
+                        if (mouse.button == Qt.RightButton) {
+                            parent.color = "red"
+                        }
+                    }
+                }
             }
-
-
         }
     }
+//            MouseArea {
+//                anchors.fill: parent
+//                onClicked: {
+//                        console.log("LOL")
+//                    if (mouse.button == Qt.RightButton) {
+//                        parent.color = "red"
+//                    }
+//                }
+//            }
 
 //    OldSchoolShader {
 //        id: retroShader

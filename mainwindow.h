@@ -12,6 +12,7 @@
 class QSpinBox;
 class QPushButton;
 class QCheckBox;
+class QTabWidget;
 
 class MainWindow : public QSplitter
 {
@@ -43,6 +44,7 @@ private slots:
 private:
     void updateTopPlayers();
 
+    QTabWidget *m_tabWidget;
     QTableView *m_botsView;
     BotModel *m_botModel;
     PathEditor *m_serverPath;

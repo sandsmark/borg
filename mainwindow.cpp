@@ -98,16 +98,16 @@ MainWindow::MainWindow(QWidget *parent)
     ///////////
     /// Main/left part of window
     ///
-    QTabWidget *tabWidget = new QTabWidget;
-    addWidget(tabWidget);
-    tabWidget->setTabPosition(QTabWidget::East);
+    m_tabWidget = new QTabWidget;
+    addWidget(m_tabWidget);
+    m_tabWidget->setTabPosition(QTabWidget::East);
 
     ///////////
     /// Tournament overview
     ///
     QQuickWidget *tournamentView = new QQuickWidget(QUrl("qrc:/TournamentView.qml"));
     tournamentView->setResizeMode(QQuickWidget::SizeRootObjectToView);
-    tabWidget->addTab(tournamentView, "Tournament view");
+    m_tabWidget->addTab(tournamentView, "Tournament view");
 
     QWidget *setupWidget = new QWidget;
     QLayout *setupLayout = new QVBoxLayout;
@@ -155,7 +155,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(removeButton, SIGNAL(clicked()), SLOT(removeBot()));
     addRemoveGroup->layout()->addWidget(removeButton);
 
-    tabWidget->addTab(setupWidget, "S&etup");
+    m_tabWidget->addTab(setupWidget, "S&etup");
 
     ///////////
     /// Server control
@@ -231,8 +231,14 @@ MainWindow::MainWindow(QWidget *parent)
     updateTopPlayers();
     // Log/output view
     m_serverOutput.setReadOnly(true);
+
 //    m_serverOutput.setTextColor(Qt::black);
     rightLayout->addWidget(&m_serverOutput, 10);
+    QPushButton *clearButton = new QPushButton(tr("Clear output"));
+    rightLayout->addWidget(clearButton);
+    connect(clearButton, &QPushButton::clicked, this, [=](){
+        this->m_serverOutput.clear();
+    });
     // Server launch button
     QPushButton *launchButton = new QPushButton(tr("&Start server"));
     launchButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -254,7 +260,7 @@ MainWindow::MainWindow(QWidget *parent)
     showUiAction->setShortcut(Qt::Key_Escape);
     connect(showUiAction, &QAction::triggered, this, [=]() {
         rightWidget->setVisible(!rightWidget->isVisible());
-        tabWidget->tabBar()->setVisible(!tabWidget->tabBar()->isVisible());
+        m_tabWidget->tabBar()->setVisible(!m_tabWidget->tabBar()->isVisible());
     });
     addAction(showUiAction);
 
@@ -301,7 +307,10 @@ void MainWindow::saveSettings()
 
 void MainWindow::launchServer()
 {
-    if (m_botModel->enabledPlayers() > 10 || m_botModel->enabledPlayers() < 1) {
+    bool tournamentMode = m_tabWidget->currentIndex() == 0;
+    m_botModel->setTournamentMode(tournamentMode);
+
+    if (m_botModel->enabledPlayers() > 4 || m_botModel->enabledPlayers() < 1) {
         QMessageBox::warning(this, tr("Invalid number of players"), tr("Either too few or too many players enabled"));
         return;
     }
@@ -482,7 +491,10 @@ void MainWindow::serverFinished(int status)
         QMessageBox::warning(this, tr("Missing players"), tr("Missing players (%1 read of %2) from the scores.txt, please adjust manually").arg(playersRead).arg(m_botModel->enabledPlayers()));
     }
 
-    TournamentController::instance()->onMatchCompleted(results);
+    bool tournamentMode = m_tabWidget->currentIndex() == 0;
+    if (tournamentMode) {
+        TournamentController::instance()->onMatchCompleted(results);
+    }
 
     m_roundsPlayed++;
     updateTopPlayers();
