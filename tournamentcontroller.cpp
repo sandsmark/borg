@@ -4,6 +4,8 @@
 #include <QDebug>
 #include <QSettings>
 #include <qmath.h>
+#include <QInputDialog>
+#include <QMessageBox>
 
 QQmlListProperty<Round> TournamentController::winnerRounds()
 {
@@ -581,6 +583,42 @@ void Match::load(QSettings *settings)
     }
 }
 
+void Match::resetDone()
+{
+    if (QMessageBox::question(nullptr, "Reset done?", "Force re-run?") != QMessageBox::Yes) {
+        return;
+    }
+
+    for (Competitor *comp : m_competitors) {
+        comp->setDone(false);
+    }
+}
+
+void Match::maybeClear()
+{
+    if (QMessageBox::question(nullptr, "Clear competitors?", "Clear competitors?") != QMessageBox::Yes) {
+        return;
+    }
+
+    clear();
+}
+
+void Match::removeCompetitor(QString competitorName)
+{
+    if (QMessageBox::question(nullptr, "Remove competitor?", "Remove competitor " + competitorName + "?") != QMessageBox::Yes) {
+        return;
+    }
+    for (Competitor * comp : m_competitors) {
+        if (comp->name() == competitorName) {
+            m_competitors.removeAll(comp);
+            emit competitorsChanged();
+            return;
+        }
+    }
+
+
+}
+
 int Match::countCompetitors(QQmlListProperty<Competitor> *list)
 {
     Match *me = qobject_cast<Match*>(list->object);
@@ -634,4 +672,32 @@ void Competitor::load(QSettings *settings)
 bool Competitor::isValid() const
 {
     return BotModel::instance()->botIsValid(m_name);
+}
+
+void Competitor::getNewName()
+{
+    QString newName = QInputDialog::getText(nullptr, "Select new name", "Name:", QLineEdit::Normal, m_name);
+    if (newName.isEmpty()) {
+        return;
+    }
+    qWarning() << "Changing name from" << m_name << "to" << newName;
+    m_name = newName;
+    emit nameChanged();
+}
+
+void Competitor::getNewScore()
+{
+    QString newScore = QInputDialog::getText(nullptr, "Select new score", "Score:", QLineEdit::Normal, QString::number(m_score));
+    if (newScore.isEmpty()) {
+        return;
+    }
+    bool ok;
+    int score = newScore.toInt(&ok);
+    if (!ok) {
+        return;
+    }
+    qWarning() << "Changing score for" << m_name << "from" << m_score << "to" << score;
+
+    m_score = score;
+    emit scoreChanged();
 }

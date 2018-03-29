@@ -187,10 +187,27 @@ Rectangle {
                 id: matchMouse
                 anchors.fill: competitorColumn
                 hoverEnabled: true
+                acceptedButtons: Qt.MiddleButton
                 onPositionChanged: {
                     var child = competitorColumn.childAt(mouse.x, mouse.y)
                     if (child) {
                         tournamentView.hoveredName = child.competitorName
+                    }
+                }
+                onClicked: {
+                    if (mouse.button != Qt.MiddleButton) {
+                        return;
+                    }
+
+                    if (mouse.modifiers == Qt.ShiftModifier) {
+                        modelData.maybeClear()
+                    } else if (mouse.modifiers == Qt.ControlModifier) {
+                        var child = competitorColumn.childAt(mouse.x, mouse.y)
+                        if (child) {
+                            modelData.removeCompetitor(child.competitorName)
+                        }
+                    } else {
+                        modelData.resetDone()
                     }
                 }
             }
@@ -259,7 +276,7 @@ Rectangle {
                     onClicked: {
                         console.log("LOL " + mouse.button)
                         if (mouse.button == Qt.RightButton) {
-                            parent.color = "red"
+                            modelData.getNewName()
                         }
                     }
                 }
@@ -285,9 +302,8 @@ Rectangle {
                     anchors.fill: parent
                     acceptedButtons: Qt.RightButton
                     onClicked: {
-                        console.log("LOL " + mouse.button)
                         if (mouse.button == Qt.RightButton) {
-                            parent.color = "red"
+                            modelData.getNewScore()
                         }
                     }
                 }

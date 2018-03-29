@@ -32,11 +32,17 @@ public:
 
     bool isValid() const;
 
+    void setDone(bool done) { m_done = done; emit doneChanged(); }
+
 signals:
     void scoreChanged();
     void winnerChanged();
     void doneChanged();
     void nameChanged();
+
+public slots:
+    void getNewName();
+    void getNewScore();
 
 private:
 
@@ -72,9 +78,15 @@ public:
 
     QString name() const { return m_id; }
 
+public slots:
+    void resetDone();
+    void maybeClear();
+    void removeCompetitor(QString competitorName);
+
 signals:
     void competitorsChanged();
     void isDoneChanged();
+
 
 private:
     static int countCompetitors(QQmlListProperty<Competitor> *list);
