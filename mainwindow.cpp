@@ -196,26 +196,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_tickInterval->setSuffix(" ms ticks");
     serverSettings->layout()->addWidget(m_tickInterval);
     m_tickInterval->setValue(settings.value(TICKINTERVAL_KEY, 50).toInt());
-    // Autostart checkbox
-    m_autoLaunch = new QCheckBox(tr("Start automatically"));
-    serverSettings->layout()->addWidget(m_autoLaunch);
-    m_autoLaunch->setChecked(settings.value(AUTOSTART_KEY, false).toBool());
-    // Autoquit checkbox
-    m_autoQuit = new QCheckBox(tr("Quit on game over"));
-    serverSettings->layout()->addWidget(m_autoQuit);
-    m_autoQuit->setChecked(settings.value(AUTOQUIT_KEY, false).toBool());
     // Fullscreen checkbox
     m_fullscreen = new QCheckBox(tr("Fullscreen"));
     serverSettings->layout()->addWidget(m_fullscreen);
     m_fullscreen->setChecked(settings.value(FULLSCREEN_KEY, false).toBool());
-    // Headless checkbox
-    m_headless = new QCheckBox(tr("Headless mode"));
-    serverSettings->layout()->addWidget(m_headless);
-    m_headless->setChecked(settings.value(HEADLESS_KEY, false).toBool());
-    // Tickless checkbox
-    m_tickless = new QCheckBox(tr("Tickless mode"));
-    serverSettings->layout()->addWidget(m_tickless);
-    m_tickless->setChecked(settings.value(TICKLESS_KEY, false).toBool());
     serverSettingsLayout->addStretch();
 
     ///////////
@@ -271,12 +255,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_serverPath, &PathEditor::pathChanged, this, &MainWindow::saveSettings);
     connect(m_rounds, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &MainWindow::saveSettings);
 
-    connect(m_autoLaunch, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
-    connect(m_autoQuit, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
     connect(m_tickInterval, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &MainWindow::saveSettings);
     connect(m_fullscreen, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
-    connect(m_headless, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
-    connect(m_tickless, &QCheckBox::stateChanged, this, &MainWindow::saveSettings);
 
     connect(launchButton, &QAbstractButton::clicked, this, &MainWindow::launchServer);
     connect(&m_serverProcess, &QProcess::readyReadStandardError, this, &MainWindow::readServerErr);
@@ -296,12 +276,8 @@ void MainWindow::saveSettings()
     QSettings settings;
     settings.setValue(SERVERPATH_KEY, m_serverPath->path());
     settings.setValue(ROUNDS_KEY, m_rounds->value());
-    settings.setValue(AUTOSTART_KEY, m_autoLaunch->isChecked());
-    settings.setValue(AUTOQUIT_KEY, m_autoQuit->isChecked());
     settings.setValue(TICKINTERVAL_KEY, m_tickInterval->value());
     settings.setValue(FULLSCREEN_KEY, m_fullscreen->isChecked());
-    settings.setValue(HEADLESS_KEY, m_headless->isChecked());
-    settings.setValue(TICKLESS_KEY, m_tickless->isChecked());
     settings.setValue(ROUNDSPLAYED_KEY, m_roundsPlayed);
 }
 
@@ -310,7 +286,7 @@ void MainWindow::launchServer()
     bool tournamentMode = m_tabWidget->currentIndex() == 0;
     m_botModel->setTournamentMode(tournamentMode);
 
-    if (m_botModel->enabledPlayers() > 4 || m_botModel->enabledPlayers() < 1) {
+    if (m_botModel->enabledPlayers() > 8 || m_botModel->enabledPlayers() < 2) {
         QMessageBox::warning(this, tr("Invalid number of players"), tr("Either too few or too many players enabled"));
         return;
     }
@@ -342,27 +318,17 @@ void MainWindow::launchServer()
     arguments << "--tick-interval" << QString::number(m_tickInterval->value());
     arguments << "--rounds" << QString::number(m_rounds->value());
 
-    if (m_autoLaunch->isChecked()) {
-        arguments << "--start-at" << QString::number(m_botModel->enabledPlayers());
+    for (const QString &botPath : m_botModel->enabledBotPaths()) {
+        arguments << "--bot" << botPath;
     }
-    if (m_autoQuit->isChecked()) {
-        arguments << "--quit-on-finish";
-    }
+
     if (m_fullscreen->isChecked()) {
         arguments << "--fullscreen";
-    }
-    if (m_headless->isChecked()) {
-        arguments << "--headless";
-    }
-    if (m_tickless->isChecked()) {
-        arguments << "--tickless";
     }
 
     m_serverProcess.setWorkingDirectory(serverExecutable.path());
     QFile::remove(m_serverProcess.workingDirectory() + "/scores.txt");
     m_serverProcess.start(serverExecutable.filePath(), arguments);
-
-    QTimer::singleShot(1000, m_botModel, SLOT(launchBots()));
 }
 
 void MainWindow::readServerErr()
@@ -390,7 +356,7 @@ void MainWindow::addBot()
 void MainWindow::addBots()
 {
     QString dirPath = QFileDialog::getExistingDirectory(this, tr("Open Directory"),
-                QStringLiteral("/home/sandsmark/tg/17/ai"),
+                QStringLiteral("/home/sandsmark/tg/18/ai"),
                                                     QFileDialog::ShowDirsOnly
                                                     | QFileDialog::DontResolveSymlinks);
     if (dirPath.isEmpty()) {
@@ -399,21 +365,17 @@ void MainWindow::addBots()
     qDebug() << "Checking for bots in" << dirPath;
     QDir dir(dirPath);
     for (const QString &subinfo : dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-//    for (const QFileInfo &subinfo : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-//        qDebug() << subinfo.absolutePath();
-//        QDir subdir(subinfo.absoluteDir());
         QDir subdir(dir.filePath(subinfo));
-        qDebug() << subdir;
-        QFileInfoList files = subdir.entryInfoList(QDir::Files | QDir::Executable);
+        QFileInfoList files = subdir.entryInfoList(QStringList("*.bot"), QDir::Files);
         if (!files.isEmpty()) {
             m_botModel->addBot(files.first().absoluteFilePath());
             continue;
         }
-        files = subdir.entryInfoList(QDir::Files | QDir::Readable);
-        if (files.count() != 1) {
-            continue;
-        }
-        m_botModel->addBot(files.first().absoluteFilePath());
+    }
+
+
+    for (const QFileInfo &botFile : dir.entryInfoList(QStringList("*.bot"), QDir::Files)) {
+        m_botModel->addBot(botFile.absoluteFilePath());
     }
 }
 
@@ -436,13 +398,10 @@ void MainWindow::kill()
     m_serverProcess.terminate();
     QThread::usleep(200);
     m_serverProcess.kill();
-    m_botModel->killBots();
 }
 
 void MainWindow::serverFinished(int status)
 {
-    m_botModel->killBots();
-
     m_logFile.close();
     m_logFile.setFileName("BORG.log");
     m_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
@@ -498,7 +457,6 @@ void MainWindow::serverFinished(int status)
 
     m_roundsPlayed++;
     updateTopPlayers();
-//    updateName();
     saveSettings();
 }
 

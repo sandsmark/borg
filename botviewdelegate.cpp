@@ -18,17 +18,6 @@ BotViewDelegate::~BotViewDelegate()
 QWidget *BotViewDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     switch(index.column()) {
-    case BotModel::Runtime: {
-        QComboBox *combobox = new QComboBox(parent);
-        combobox->addItems(BotModel::runtimes().keys());
-        return combobox;
-    }
-    case BotModel::Arguments: {
-        QComboBox *combobox = new QComboBox(parent);
-        combobox->addItems(QStringList() << "" << "127.0.0.1" << "localhost");
-        combobox->setEditable(true);
-        return combobox;
-    }
     case BotModel::Path:
         return new PathEditor(parent);
         break;

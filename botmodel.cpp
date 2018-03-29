@@ -15,15 +15,11 @@ BotModel::BotModel() :
     m_tournamentMode(false)
 {
     QSettings settings;
-    m_bots = settings.value(BOTS_KEY, QVariant::fromValue(QList<Bot>())).value<QList<Bot> >();
-    for (int i=0; i<m_bots.length(); i++) {
-        initializeBotProcess(&m_bots[i]);
-    }
+    m_bots = settings.value(BOTS_KEY, QVariant::fromValue(QList<Bot>())).value<QList<Bot>>();
 }
 
 BotModel::~BotModel()
 {
-    killBots();
 }
 
 QVariant BotModel::data(const QModelIndex &index, int role) const
@@ -49,19 +45,14 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
     switch (column) {
     case Enabled:
         return QVariant();
-        //return bot.enabled ? tr("Enabled") : tr("Disabled");
     case Name:
         return bot.name;
-    case Runtime:
-        return bot.runtime;
     case Path:
         if (bot.path.length() > 20) {
             return QStringLiteral("...") + bot.path.right(20);
         } else {
             return bot.path;
         }
-    case Arguments:
-        return bot.arguments;
     case Wins:
         return bot.wins;
     case RoundWins:
@@ -70,18 +61,6 @@ QVariant BotModel::data(const QModelIndex &index, int role) const
         return bot.totalScore;
     case RoundsPlayed:
         return bot.roundsPlayed;
-    case Running:
-        switch(bot.process->state()) {
-        case QProcess::Running:
-            return tr("Running");
-        case QProcess::Starting:
-            return tr("Starting");
-        case QProcess::NotRunning:
-            return tr("Not running");
-        default:
-            return tr("Unknown");
-        }
-        break;
     default:
         qWarning() << Q_FUNC_INFO << "asked for unknown colum" << column;
         return QVariant("fuck off");
@@ -101,12 +80,8 @@ QVariant BotModel::headerData(int section, Qt::Orientation orientation, int role
         return tr("Enabled");
     case Name:
         return tr("Name");
-    case Runtime:
-        return tr("Runtime");
     case Path:
         return tr("Path");
-    case Arguments:
-        return tr("Arguments");
     case Wins:
         return tr("Games won");
     case RoundWins:
@@ -115,8 +90,6 @@ QVariant BotModel::headerData(int section, Qt::Orientation orientation, int role
         return tr("Total points");
     case RoundsPlayed:
         return tr("Games Played");
-    case Running:
-        return tr("Running");
     default:
         qDebug() << "asked for unknown column" << section;
         return QVariant("Foo");
@@ -141,14 +114,8 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
     case Name:
         bot->name = value.toString();
         break;
-    case Runtime:
-        bot->runtime = value.toString();
-        break;
     case Path:
         bot->path = value.toString();
-        break;
-    case Arguments:
-        bot->arguments = value.toString();
         break;
     case Wins:
         bot->wins = value.toInt();
@@ -162,8 +129,6 @@ bool BotModel::setData(const QModelIndex &index, const QVariant &value, int role
     case RoundWins:
         bot->roundWins = value.toInt();
         break;
-    case Running:
-        return false;
     default:
         qWarning() << "asked to set value for illegal column" << index.column();
         return false;
@@ -177,8 +142,6 @@ Qt::ItemFlags BotModel::flags(const QModelIndex &index) const
     Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
     if (index.column() == Enabled) {
         flags |= Qt::ItemIsUserCheckable;
-    } else if (index.column() != Running) {
-        flags |= Qt::ItemIsEditable;
     }
 
     return flags;
@@ -192,120 +155,6 @@ void BotModel::removeRow(int row)
     save();
 }
 
-void BotModel::launchBots()
-{
-    beginResetModel(); // For running info
-    const QStringList botsToLaunch = TournamentController::instance()->getNextCompetitors();
-    for (int i=0; i<m_bots.length(); i++) {
-        if (m_tournamentMode) {
-            if (!botsToLaunch.contains(m_bots[i].name)) continue;
-        } else {
-            if (!m_bots[i].enabled) continue;
-        }
-
-        QFileInfo file(m_bots[i].path);
-        m_bots[i].process->setWorkingDirectory(file.path());
-        QStringList arguments;
-
-        arguments << "--nice=19" << "--quiet" << "-c" << "--seccomp" << "--overlay-tmpfs" << ("--private=" + file.path());
-
-        if (m_bots[i].runtime.isEmpty()) {
-//            arguments << m_bots[i].path;
-            arguments << "./" + file.fileName();
-//            m_bots[i].process->start(m_bots[i].path);
-        } else {
-            if (!runtimes().contains(m_bots[i].runtime)) {
-                qWarning() << "Unable to find runtime" << m_bots[i].runtime;
-                continue;
-            }
-
-            arguments << runtimes()[m_bots[i].runtime];
-
-            if (m_bots[i].runtime == "java") {
-                arguments << "-jar";
-            }
-
-            arguments << file.fileName();
-
-            if (!m_bots[i].arguments.isEmpty()) {
-                arguments << m_bots[i].arguments.split(' ');
-            }
-
-            qDebug() << "launching" << runtimes()[m_bots[i].runtime] << file.fileName() << m_bots[i].arguments;
-        }
-        m_bots[i].process->start("/usr/bin/firejail", arguments);
-    }
-    endResetModel();
-}
-
-void BotModel::killBots()
-{
-    beginResetModel();
-    for (int i=0; i<m_bots.length(); i++) {
-        if (m_bots[i].process->state() == QProcess::Running) {
-            m_bots[i].process->terminate();
-//            QThread::msleep(500);
-//            m_bots[i].process->kill();
-        }
-    }
-    endResetModel();
-}
-
-void BotModel::handleProcessError(QProcess::ProcessError error)
-{
-    QProcess *process = qobject_cast<QProcess*>(sender());
-    if (process) {
-        const QStringList arguments = process->arguments();
-        if (arguments.count() > 7) {
-            if (arguments[6] == "-jar" && arguments.count() > 8) {
-                qWarning() << arguments[8];
-            } else {
-                qWarning() << arguments[7];
-            }
-        } else {
-            qWarning() << arguments;
-        }
-        qWarning() << process->errorString();
-//        if (process->arguments().count()> 1) {
-//            qWarning() << "Error from bot: " << process->arguments()[0];
-//        } else {
-//            qWarning() << "Error from bot: " << process->program();
-//        }
-    }
-    switch(error){
-    case QProcess::FailedToStart:
-        qWarning() << "Bot failed to start";
-        break;
-    case QProcess::Crashed:
-        qWarning() << "Bot crashed";
-        break;
-    case QProcess::Timedout:
-        qWarning() << "Bot launch timed out";
-        break;
-    case QProcess::WriteError:
-        qWarning() << "Write error when communicating with bot";
-        break;
-    case QProcess::ReadError:
-        qWarning() << "Read error when communicating with bot";
-        break;
-    case QProcess::UnknownError:
-    default:
-        qWarning() << "Unknown bot process error";
-    }
-}
-
-void BotModel::initializeBotProcess(Bot *bot)
-{
-    bot->process = QSharedPointer<QProcess>(new QProcess);
-    QFileInfo info(bot->path);
-    bot->logfile = QSharedPointer<QFile>(new QFile(info.path() + "/logfile.txt"));
-    bot->logfile->open(QIODevice::WriteOnly | QIODevice::Append);
-    connect(bot->process.data(), SIGNAL(readyReadStandardError()), SLOT(storeOutput()));
-    connect(bot->process.data(), SIGNAL(readyReadStandardOutput()), SLOT(storeOutput()));
-    connect(bot->process.data(), SIGNAL(stateChanged(QProcess::ProcessState)), SLOT(botStateChanged()));
-    connect(bot->process.data(), SIGNAL(error(QProcess::ProcessError)), SLOT(handleProcessError(QProcess::ProcessError)));
-}
-
 void BotModel::addBot(QString path)
 {
     QFileInfo file(path);
@@ -314,7 +163,7 @@ void BotModel::addBot(QString path)
         QMessageBox::warning(0, tr("Unable to add bot"), tr("The path to the bot does not exist."));
         return;
     }
-    const QString name = file.dir().dirName();
+    const QString name = file.baseName();
     if (botNames().contains(name)) {
         qWarning() << "Bot" << name << "is already added";
         return;
@@ -328,49 +177,18 @@ void BotModel::addBot(QString path)
     bot.roundWins = 0;
     bot.totalScore = 0;
     bot.roundsPlayed = 0;
-    if (file.suffix() == "py") {
-        bot.runtime = "python";
-    } else if (file.suffix() == "rb") {
-        bot.runtime = "ruby";
-    } else if (file.suffix() == "js") {
-        bot.runtime = "nodejs";
-    } else if (file.suffix() == "pl") {
-        bot.runtime = "perl";
-    } else if (file.suffix() == "exe") {
-        bot.runtime = "mono";
-    } else if (file.suffix() == "jar") {
-        bot.runtime = "java";
-    } else if (!file.isExecutable()) {
-        bot.runtime = "unknown";
-    }
+
     beginInsertRows(QModelIndex(), m_bots.length(), m_bots.length() + 1);
     m_bots.append(bot);
-    initializeBotProcess(&m_bots.last());
     endInsertRows();
 
     save();
 }
 
-void BotModel::save()
+void BotModel::save() const
 {
     QSettings settings;
     settings.setValue(BOTS_KEY, QVariant::fromValue(m_bots));
-}
-
-QHash<QString, QString> BotModel::runtimes()
-{
-    QHash<QString, QString> ret;
-    ret["python"] = "/usr/bin/python2";
-    ret["python3"] = "/usr/bin/python";
-    ret["ruby"] = "/usr/bin/ruby";
-    ret["nodejs"] = "/usr/bin/node";
-    ret["perl"] = "/usr/bin/perl";
-    ret["mono"] = "/usr/bin/mono";
-    ret["java"] = "/usr/bin/java";
-    ret["wine"] = "/usr/bin/wine";
-    ret[""] = "";
-
-    return ret;
 }
 
 void BotModel::roundOver(QString name, bool isWinner, int roundWins, int score)
@@ -440,13 +258,15 @@ QStringList BotModel::topPlayers()
 
 void BotModel::resetBots()
 {
+    beginResetModel();
     for (int i=0; i<m_bots.count(); i++) {
         m_bots[i].roundsPlayed = 0;
         m_bots[i].roundWins = 0;
         m_bots[i].totalScore = 0;
         m_bots[i].wins = 0;
     }
-    botStateChanged();
+    endResetModel();
+
     save();
 }
 
@@ -485,51 +305,36 @@ bool BotModel::botIsValid(const QString botName)
     return false;
 }
 
+QStringList BotModel::enabledBotPaths() const
+{
+    QStringList botsToPlay;
+    if (m_tournamentMode) {
+        botsToPlay = TournamentController::instance()->getNextCompetitors();
+    }
 
+    QStringList paths;
+    for (const Bot &bot : m_bots) {
+        if (!bot.enabled) {
+            continue;
+        }
+        if (m_tournamentMode && !botsToPlay.contains(bot.name)) {
+            continue;
+        }
+
+        paths.append(bot.path);
+    }
+    return paths;
+}
 
 QDataStream &operator<<(QDataStream &out, const Bot &bot)
 {
-    out << bot.enabled << bot.name << bot.path << bot.arguments << bot.runtime << bot.wins << bot.roundWins << bot.totalScore << bot.roundsPlayed;
+    out << bot.enabled << bot.name << bot.path << bot.wins << bot.roundWins << bot.totalScore << bot.roundsPlayed;
     return out;
 }
 
 
 QDataStream &operator>>(QDataStream &in, Bot &bot)
 {
-    in >> bot.enabled >> bot.name >> bot.path >> bot.arguments >> bot.runtime >> bot.wins >> bot.roundWins >> bot.totalScore >> bot.roundsPlayed;
+    in >> bot.enabled >> bot.name >> bot.path >> bot.wins >> bot.roundWins >> bot.totalScore >> bot.roundsPlayed;
     return in;
-}
-
-
-void BotModel::storeOutput()
-{
-    for (int i=0; i<m_bots.length(); i++) {
-        if (m_bots[i].process.data() != sender()) continue;
-
-        QByteArray err = m_bots[i].process->readAllStandardError();
-//        qDebug() << m_bots[i].name << err;
-//        if (!err.isEmpty()) {
-//            const QStringList arguments = m_bots[i].process->arguments();
-//            if (arguments.count() > 7) {
-//                qDebug() << arguments[7] << err;
-//        } else {
-//                qDebug() << arguments << err;
-//            }
-//        }
-        m_bots[i].logfile->write(err);
-        QByteArray out = m_bots[i].process->readAllStandardOutput();
-        if (!out.isEmpty()) {
-//            qDebug() << m_bots[i].name << out;
-        }
-        m_bots[i].logfile->write(out);
-        return;
-    }
-    qWarning() << "Unable to find bot with process" << sender();
-}
-
-void BotModel::botStateChanged()
-{
-    //TODO: actually check which bots changed and whatnot plz
-    beginResetModel();
-    endResetModel();
 }

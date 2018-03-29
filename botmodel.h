@@ -12,15 +12,11 @@
 struct Bot {
     bool enabled;
     QString name;
-    QString runtime;
     QString path;
-    QString arguments;
-    int wins;
-    int roundWins;
-    int totalScore;
-    int roundsPlayed;
-    QSharedPointer<QProcess> process;
-    QSharedPointer<QFile> logfile;
+    int wins = -1;
+    int roundWins = -1;
+    int totalScore = -1;
+    int roundsPlayed = -1;
 };
 
 QDataStream &operator<<(QDataStream &out, const Bot &bot);
@@ -35,14 +31,12 @@ public:
     enum Column {
         Enabled = 0,
         Name,
-        Runtime,
         Path,
-        Arguments,
         Wins,
         RoundWins,
         TotalScore,
         RoundsPlayed,
-        Running
+        ColumnCount
     };
 
     static BotModel *instance() { static BotModel me; return &me; }
@@ -50,7 +44,7 @@ public:
     ~BotModel();
 
     int rowCount(const QModelIndex & = QModelIndex()) const override { return m_bots.length(); }
-    int columnCount(const QModelIndex &) const override { return 10; }
+    int columnCount(const QModelIndex &) const override { return ColumnCount; }
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
@@ -58,9 +52,7 @@ public:
     void removeRow(int row);
     void addBot(QString path);
 
-    void save();
-
-    static QHash<QString, QString> runtimes();
+    void save() const;
 
     void roundOver(QString name, bool isWinner, int roundWins, int score);
 
@@ -72,23 +64,15 @@ public:
 
     QStringList botNames() const;
     int botWins(const QString &name) const;
-    QString botName(int row) const { if (row >= rowCount()) return QString::null; return m_bots[row].name; }
+    QString botName(int row) const { if (row < 0 || row >= rowCount()) QString(); return m_bots[row].name; }
     bool botIsValid(const QString botName);
+
+    QStringList enabledBotPaths() const;
 
     void setTournamentMode(bool enabled) { m_tournamentMode = enabled; }
 
-public slots:
-    void launchBots();
-    void killBots();
-    void handleProcessError(QProcess::ProcessError error);
-
-private slots:
-    void storeOutput();
-    void botStateChanged();
-
 private:
     BotModel();
-    void initializeBotProcess(Bot *bot);
 
     QList<Bot> m_bots;
     bool m_tournamentMode;

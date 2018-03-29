@@ -50,11 +50,7 @@ private:
     PathEditor *m_serverPath;
     QSpinBox *m_rounds;
     QSpinBox *m_tickInterval;
-    QCheckBox *m_autoLaunch;
-    QCheckBox *m_autoQuit;
     QCheckBox *m_fullscreen;
-    QCheckBox *m_headless;
-    QCheckBox *m_tickless;
     QProcess m_serverProcess;
     QTextEdit m_serverOutput;
     QFile m_logFile;
