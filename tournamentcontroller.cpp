@@ -32,6 +32,7 @@ void TournamentController::onMatchCompleted(const QMap<QString, int> &results)
 {
     // Verify that it wasn't a tie, because then run it again cuz I'm lazy
     if (hasDuplicates(results.values())) {
+        qDebug() << "Was a tie, run it again";
         return;
     }
 
@@ -48,7 +49,6 @@ void TournamentController::onMatchCompleted(const QMap<QString, int> &results)
     }
 
     bool isLosersBracket = m_loserBracket.contains(round);
-    qDebug() << "Was losers bracket?" << isLosersBracket;
 
     for (const QString &name : results.keys()) {
         currentMatch->setResult(name, results[name]);

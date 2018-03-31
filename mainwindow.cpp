@@ -400,6 +400,17 @@ void MainWindow::kill()
     m_serverProcess.kill();
 }
 
+static bool isTie(const QList<int> &list)
+{
+    const int first = list.first();
+    for (const int num : list) {
+        if (num != first) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void MainWindow::serverFinished(int status)
 {
     m_logFile.close();
@@ -422,6 +433,7 @@ void MainWindow::serverFinished(int status)
     int playersRead = 0;
 
     QMap<QString, int> results;
+    QMap<QString, int> pointResults;
     while (!resultsLog.atEnd()) {
         QList<QByteArray> player = resultsLog.readLine().trimmed().split(';');
         if (player.length() != 3) {
@@ -443,11 +455,38 @@ void MainWindow::serverFinished(int status)
 
         m_botModel->roundOver(name, (playersRead == 0), wins, points);
         results[name] = wins;
+        pointResults[name] = points;
         playersRead++;
     }
 
     if (playersRead != m_botModel->enabledPlayers()) {
         QMessageBox::warning(this, tr("Missing players"), tr("Missing players (%1 read of %2) from the scores.txt, please adjust manually").arg(playersRead).arg(m_botModel->enabledPlayers()));
+    }
+
+    if (isTie(results.values())) {
+        if (isTie(pointResults.values())) {
+            qDebug() << pointResults;
+            QMessageBox::warning(this, tr("Was tie"), tr("Was tie, unable to use tie breaker"));
+            return;
+        }
+
+        int maxPoints = pointResults.values().first();
+        QString winnerBotName = pointResults.keys().first();
+        for (const QString &botName : pointResults.keys()) {
+            if (pointResults[botName] <= maxPoints) {
+                continue;
+            }
+            maxPoints = pointResults[botName];
+            winnerBotName = botName;
+        }
+
+        for (const QString &botName : pointResults.keys()) {
+            if (botName == winnerBotName) {
+                results[botName] = 1;
+            } else {
+                results[botName] = 0;
+            }
+        }
     }
 
     bool tournamentMode = m_tabWidget->currentIndex() == 0;
