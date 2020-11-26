@@ -64,7 +64,7 @@ public:
 
     QStringList botNames() const;
     int botWins(const QString &name) const;
-    QString botName(int row) const { if (row < 0 || row >= rowCount()) QString(); return m_bots[row].name; }
+    QString botName(int row) const { if (row < 0 || row >= rowCount()) return QString(); return m_bots[row].name; }
     bool botIsValid(const QString botName);
 
     QStringList enabledBotPaths() const;
